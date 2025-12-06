@@ -16,8 +16,8 @@ export const curriculum = {
       { "chapter_title": "Our Environment", "table_id": "", "section": "Science" }
     ],
 
-    "Natural Phenomena & Effects of Current (Physics)": [
-      { "chapter_title": "Light – Reflection and Refraction", "table_id": "", "section": "Science" },
+    "Natural Phenomena and Effects of Current (Physics)": [
+      { "chapter_title": "Light - Reflection and Refraction", "table_id": "", "section": "Science" },
       { "chapter_title": "Human Eye and Colourful World", "table_id": "", "section": "Science" },
       { "chapter_title": "Electricity", "table_id": "", "section": "Science" },
       { "chapter_title": "Magnetic Effects of Electric Current", "table_id": "", "section": "Science" }
@@ -25,7 +25,7 @@ export const curriculum = {
   },
 
   "Social Science": {
-    "History: India and the Contemporary World-II": [
+    "History: India and the Contemporary World - II": [
       { "chapter_title": "The Rise of Nationalism in Europe", "table_id": "", "section": "Social Science" },
       { "chapter_title": "Nationalism in India", "table_id": "", "section": "Social Science" },
       { "chapter_title": "The Making of a Global World", "table_id": "", "section": "Social Science" },
@@ -33,7 +33,7 @@ export const curriculum = {
       { "chapter_title": "Print Culture and the Modern World", "table_id": "", "section": "Social Science" }
     ],
 
-    "Political Science (Civics): Democratic Politics-II": [
+    "Political Science (Civics): Democratic Politics - II": [
       { "chapter_title": "Power Sharing", "table_id": "", "section": "Social Science" },
       { "chapter_title": "Federalism", "table_id": "", "section": "Social Science" },
       { "chapter_title": "Democracy and Diversity", "table_id": "", "section": "Social Science" },
@@ -43,7 +43,7 @@ export const curriculum = {
       { "chapter_title": "Challenges to Democracy", "table_id": "", "section": "Social Science" }
     ],
 
-    "Geography: Contemporary India-II": [
+    "Geography: Contemporary India - II": [
       { "chapter_title": "Resources and Development", "table_id": "", "section": "Social Science" },
       { "chapter_title": "Forest and Wildlife Resources", "table_id": "", "section": "Social Science" },
       { "chapter_title": "Water Resources", "table_id": "", "section": "Social Science" },
@@ -70,7 +70,7 @@ export const curriculum = {
       { "chapter_title": "Arithmetic Progressions", "table_id": "", "section": "Mathematics" }
     ],
 
-    "Geometry & Trigonometry": [
+    "Geometry and Trigonometry": [
       { "chapter_title": "Triangles", "table_id": "", "section": "Mathematics" },
       { "chapter_title": "Coordinate Geometry", "table_id": "", "section": "Mathematics" },
       { "chapter_title": "Introduction to Trigonometry", "table_id": "", "section": "Mathematics" },
@@ -79,7 +79,7 @@ export const curriculum = {
       { "chapter_title": "Constructions", "table_id": "", "section": "Mathematics" }
     ],
 
-    "Number System & Mensuration/Statistics": [
+    "Number System and Mensuration / Statistics": [
       { "chapter_title": "Real Numbers", "table_id": "", "section": "Mathematics" },
       { "chapter_title": "Areas Related to Circles", "table_id": "", "section": "Mathematics" },
       { "chapter_title": "Surface Areas and Volumes", "table_id": "", "section": "Mathematics" },
