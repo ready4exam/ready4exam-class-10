@@ -12,6 +12,7 @@ export const curriculum = {
       { "chapter_title": "Control and Coordination", "table_id": "", "section": "Science" },
       { "chapter_title": "How do Organisms Reproduce?", "table_id": "", "section": "Science" },
       { "chapter_title": "Heredity and Evolution", "table_id": "", "section": "Science" }
+      { "chapter_title": "Our Environment", "table_id": "", "section": "Science" }
     ],
     "Natural Phenomena & Effects of Current (Physics)": [
       { "chapter_title": "Light – Reflection and Refraction", "table_id": "", "section": "Science" },
@@ -19,9 +20,6 @@ export const curriculum = {
       { "chapter_title": "Electricity", "table_id": "", "section": "Science" },
       { "chapter_title": "Magnetic Effects of Electric Current", "table_id": "", "section": "Science" }
     ],
-    "Natural Resources (Environment/Biology)": [
-      { "chapter_title": "Our Environment", "table_id": "", "section": "Science" }
-    ]
   },
 
   "Social Science": {
