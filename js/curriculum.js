@@ -66,4 +66,27 @@ export const curriculum = {
     "Algebra": [
       { "chapter_title": "Polynomials", "table_id": "", "section": "Mathematics" },
       { "chapter_title": "Pair of Linear Equations in Two Variables", "table_id": "", "section": "Mathematics" },
-      { "chapter_title": "Quadratic Equations", "table_id": "
+      { "chapter_title": "Quadratic Equations", "table_id": "", "section": "Mathematics" },
+      { "chapter_title": "Arithmetic Progressions", "table_id": "", "section": "Mathematics" }
+    ],
+
+    "Geometry & Trigonometry": [
+      { "chapter_title": "Triangles", "table_id": "", "section": "Mathematics" },
+      { "chapter_title": "Coordinate Geometry", "table_id": "", "section": "Mathematics" },
+      { "chapter_title": "Introduction to Trigonometry", "table_id": "", "section": "Mathematics" },
+      { "chapter_title": "Some Applications of Trigonometry", "table_id": "", "section": "Mathematics" },
+      { "chapter_title": "Circles", "table_id": "", "section": "Mathematics" },
+      { "chapter_title": "Constructions", "table_id": "", "section": "Mathematics" }
+    ],
+
+    "Number System & Mensuration/Statistics": [
+      { "chapter_title": "Real Numbers", "table_id": "", "section": "Mathematics" },
+      { "chapter_title": "Areas Related to Circles", "table_id": "", "section": "Mathematics" },
+      { "chapter_title": "Surface Areas and Volumes", "table_id": "", "section": "Mathematics" },
+      { "chapter_title": "Statistics", "table_id": "", "section": "Mathematics" },
+      { "chapter_title": "Probability", "table_id": "", "section": "Mathematics" }
+    ]
+  }
+};
+
+export default curriculum;
