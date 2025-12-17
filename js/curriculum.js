@@ -177,7 +177,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Lifelines of National Economy",
-        "table_id": "",
+        "table_id": "social_lifelines_economy_10_quiz",
         "section": "Social Science"
       }
     ],
