@@ -152,7 +152,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Forest and Wildlife Resources",
-        "table_id": "",
+        "table_id": "social_forest_resources_10_quiz",
         "section": "Social Science"
       },
       {
