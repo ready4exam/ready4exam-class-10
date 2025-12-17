@@ -115,7 +115,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Federalism",
-        "table_id": "",
+        "table_id": "social_federalism_federalism_10_quiz",
         "section": "Social Science"
       },
       {
