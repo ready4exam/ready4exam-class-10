@@ -120,7 +120,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Democracy and Diversity",
-        "table_id": "",
+        "table_id": "social_democracy_diversity_10_quiz",
         "section": "Social Science"
       },
       {
