@@ -157,7 +157,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Water Resources",
-        "table_id": "",
+        "table_id": "social_water_resources_10_quiz",
         "section": "Social Science"
       },
       {
