@@ -93,7 +93,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "The Making of a Global World",
-        "table_id": "",
+        "table_id": "social_making_world_10_quiz",
         "section": "Social Science"
       },
       {
