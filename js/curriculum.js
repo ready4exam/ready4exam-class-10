@@ -98,7 +98,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "The Age of Industrialisation",
-        "table_id": "",
+        "table_id": "social_age_industrialisation_10_quiz",
         "section": "Social Science"
       },
       {
