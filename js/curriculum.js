@@ -240,7 +240,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Coordinate Geometry",
-        "table_id": "",
+        "table_id": "mathematics_coordinate_geometry_10_quiz",
         "section": "Mathematics"
       },
       {
