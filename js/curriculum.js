@@ -267,7 +267,7 @@ export const curriculum = {
     "Number System & Mensuration/Statistics": [
       {
         "chapter_title": "Real Numbers",
-        "table_id": "",
+        "table_id": "mathematics_real_numbers_10_quiz",
         "section": "Mathematics"
       },
       {
