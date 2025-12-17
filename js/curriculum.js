@@ -218,7 +218,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Pair of Linear Equations in Two Variables",
-        "table_id": "",
+        "table_id": "mathematics_pair_variables_10_quiz",
         "section": "Mathematics"
       },
       {
