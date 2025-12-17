@@ -172,7 +172,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Manufacturing Industries",
-        "table_id": "",
+        "table_id": "social_manufacturing_industries_10_quiz",
         "section": "Social Science"
       },
       {
