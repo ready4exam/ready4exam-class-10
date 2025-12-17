@@ -23,7 +23,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Periodic Classification of Elements",
-        "table_id": "",
+        "table_id": "science_periodic_elements_10_quiz",
         "section": "Science"
       }
     ],
