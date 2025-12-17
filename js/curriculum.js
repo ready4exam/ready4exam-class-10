@@ -255,7 +255,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Circles",
-        "table_id": "",
+        "table_id": "mathematics_circles_circles_10_quiz",
         "section": "Mathematics"
       },
       {
