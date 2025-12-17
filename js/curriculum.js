@@ -3,7 +3,7 @@ export const curriculum = {
     "Chemical Substances - Nature and Behaviour (Chemistry)": [
       {
         "chapter_title": "Chemical Reactions and Equations",
-        "table_id": "",
+        "table_id": "science_chemical_equations_10_quiz",
         "section": "Science"
       },
       {
