@@ -245,7 +245,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Introduction to Trigonometry",
-        "table_id": "",
+        "table_id": "mathematics_introduction_trigonometry_10_quiz",
         "section": "Mathematics"
       },
       {
