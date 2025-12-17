@@ -130,7 +130,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Political Parties",
-        "table_id": "",
+        "table_id": "social_political_parties_10_quiz",
         "section": "Social Science"
       },
       {
