@@ -18,7 +18,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Carbon and its Compounds",
-        "table_id": "",
+        "table_id": "science_carbon_compounds_10_quiz",
         "section": "Science"
       },
       {
