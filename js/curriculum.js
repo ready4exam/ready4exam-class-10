@@ -272,7 +272,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Areas Related to Circles",
-        "table_id": "",
+        "table_id": "mathematics_areas_circles_10_quiz",
         "section": "Mathematics"
       },
       {
