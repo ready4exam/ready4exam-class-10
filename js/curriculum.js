@@ -110,7 +110,7 @@ export const curriculum = {
     "Political Science (Civics): Democratic Politics-II": [
       {
         "chapter_title": "Power Sharing",
-        "table_id": "",
+        "table_id": "social_power_sharing_10_quiz",
         "section": "Social Science"
       },
       {
