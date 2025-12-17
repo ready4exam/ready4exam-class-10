@@ -228,7 +228,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Arithmetic Progressions",
-        "table_id": "",
+        "table_id": "mathematics_arithmetic_progressions_10_quiz",
         "section": "Mathematics"
       }
     ],
