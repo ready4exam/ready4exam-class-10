@@ -135,7 +135,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Outcomes of Democracy",
-        "table_id": "",
+        "table_id": "social_outcomes_democracy_10_quiz",
         "section": "Social Science"
       },
       {
