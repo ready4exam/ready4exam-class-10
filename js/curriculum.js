@@ -103,7 +103,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Print Culture and the Modern World",
-        "table_id": "",
+        "table_id": "social_print_world_10_quiz",
         "section": "Social Science"
       }
     ],
