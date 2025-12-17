@@ -250,7 +250,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Some Applications of Trigonometry",
-        "table_id": "",
+        "table_id": "mathematics_some_trigonometry_10_quiz",
         "section": "Mathematics"
       },
       {
