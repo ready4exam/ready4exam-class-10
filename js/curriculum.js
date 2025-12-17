@@ -88,7 +88,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Nationalism in India",
-        "table_id": "",
+        "table_id": "social_nationalism_india_10_quiz",
         "section": "Social Science"
       },
       {
