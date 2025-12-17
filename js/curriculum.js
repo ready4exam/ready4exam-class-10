@@ -223,7 +223,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Quadratic Equations",
-        "table_id": "",
+        "table_id": "mathematics_quadratic_equations_10_quiz",
         "section": "Mathematics"
       },
       {
