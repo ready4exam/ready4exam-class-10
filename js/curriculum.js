@@ -213,7 +213,7 @@ export const curriculum = {
     "Algebra": [
       {
         "chapter_title": "Polynomials",
-        "table_id": "",
+        "table_id": "mathematics_polynomials_polynomials_10_quiz",
         "section": "Mathematics"
       },
       {
