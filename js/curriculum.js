@@ -125,7 +125,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Gender, Religion and Caste",
-        "table_id": "",
+        "table_id": "social_gender_caste_10_quiz",
         "section": "Social Science"
       },
       {
