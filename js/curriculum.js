@@ -83,7 +83,7 @@ export const curriculum = {
     "History: India and the Contemporary World-II": [
       {
         "chapter_title": "The Rise of Nationalism in Europe",
-        "table_id": "",
+        "table_id": "social_rise_europe_10_quiz",
         "section": "Social Science"
       },
       {
