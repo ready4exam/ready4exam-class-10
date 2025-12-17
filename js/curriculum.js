@@ -147,7 +147,7 @@ export const curriculum = {
     "Geography: Contemporary India-II": [
       {
         "chapter_title": "Resources and Development",
-        "table_id": "",
+        "table_id": "social_resources_development_10_quiz",
         "section": "Social Science"
       },
       {
