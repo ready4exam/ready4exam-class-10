@@ -167,7 +167,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Minerals and Energy Resources",
-        "table_id": "",
+        "table_id": "social_minerals_resources_10_quiz",
         "section": "Social Science"
       },
       {
