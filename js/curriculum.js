@@ -235,7 +235,7 @@ export const curriculum = {
     "Geometry & Trigonometry": [
       {
         "chapter_title": "Triangles",
-        "table_id": "",
+        "table_id": "mathematics_triangles_triangles_10_quiz",
         "section": "Mathematics"
       },
       {
