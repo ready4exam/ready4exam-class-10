@@ -184,7 +184,7 @@ export const curriculum = {
     "Economics: Understanding Economic Development": [
       {
         "chapter_title": "Development",
-        "table_id": "",
+        "table_id": "social_development_development_10_quiz",
         "section": "Social Science"
       },
       {
