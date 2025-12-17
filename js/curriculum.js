@@ -140,7 +140,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Challenges to Democracy",
-        "table_id": "",
+        "table_id": "social_challenges_democracy_10_quiz",
         "section": "Social Science"
       }
     ],
