@@ -282,7 +282,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Statistics",
-        "table_id": "",
+        "table_id": "mathematics_statistics_statistics_10_quiz",
         "section": "Mathematics"
       },
       {
