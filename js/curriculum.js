@@ -30,7 +30,7 @@ export const curriculum = {
     "World of Living (Biology)": [
       {
         "chapter_title": "Life Processes",
-        "table_id": "",
+        "table_id": "science_life_processes_10_quiz",
         "section": "Science"
       },
       {
