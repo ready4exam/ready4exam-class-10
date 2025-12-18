@@ -67,7 +67,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Magnetic Effects of Electric Current",
-        "table_id": "",
+        "table_id": "science_magnetic_current_10_quiz",
         "section": "Science"
       }
     ],
