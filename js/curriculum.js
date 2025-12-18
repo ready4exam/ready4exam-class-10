@@ -57,7 +57,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Human Eye and Colourful World",
-        "table_id": "",
+        "table_id": "science_human_world_10_quiz",
         "section": "Science"
       },
       {
