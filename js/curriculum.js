@@ -74,7 +74,7 @@ export const curriculum = {
     "Natural Resources (Environment/Biology)": [
       {
         "chapter_title": "Our Environment",
-        "table_id": "",
+        "table_id": "science_our_environment_10_quiz",
         "section": "Science"
       }
     ]
