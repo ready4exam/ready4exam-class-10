@@ -199,7 +199,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Globalisation and the Indian Economy",
-        "table_id": "",
+        "table_id": "social_globalisation_economy_10_quiz",
         "section": "Social Science"
       },
       {
