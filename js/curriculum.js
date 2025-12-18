@@ -194,7 +194,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Money and Credit",
-        "table_id": "",
+        "table_id": "social_money_credit_10_quiz",
         "section": "Social Science"
       },
       {
