@@ -45,7 +45,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Heredity and Evolution",
-        "table_id": "",
+        "table_id": "science_heredity_evolution_10_quiz",
         "section": "Science"
       }
     ],
