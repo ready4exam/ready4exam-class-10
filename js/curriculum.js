@@ -204,7 +204,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Consumer Rights",
-        "table_id": "",
+        "table_id": "social_consumer_rights_10_quiz",
         "section": "Social Science"
       }
     ]
