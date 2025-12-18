@@ -52,7 +52,7 @@ export const curriculum = {
     "Natural Phenomena & Effects of Current (Physics)": [
       {
         "chapter_title": "Light – Reflection and Refraction",
-        "table_id": "",
+        "table_id": "science_light_refraction_10_quiz",
         "section": "Science"
       },
       {
