@@ -35,7 +35,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Control and Coordination",
-        "table_id": "",
+        "table_id": "science_control_coordination_10_quiz",
         "section": "Science"
       },
       {
