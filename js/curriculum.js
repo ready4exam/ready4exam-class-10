@@ -40,7 +40,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "How do Organisms Reproduce?",
-        "table_id": "",
+        "table_id": "science_how_reproduce_10_quiz",
         "section": "Science"
       },
       {
