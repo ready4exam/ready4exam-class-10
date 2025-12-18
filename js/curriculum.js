@@ -189,7 +189,7 @@ export const curriculum = {
       },
       {
         "chapter_title": "Sectors of the Indian Economy",
-        "table_id": "",
+        "table_id": "social_sectors_economy_10_quiz",
         "section": "Social Science"
       },
       {
