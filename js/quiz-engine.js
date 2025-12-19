@@ -1,298 +1,168 @@
-// js/quiz-engine.js
-// -----------------------------------------------------------------------------
-// UNIVERSAL QUIZ ENGINE (Class 5–12)
-// - CLASS_ID auto replaced by automation: 10
-// - Uses difficulty exactly: "Simple" | "Medium" | "Advanced"
-// -----------------------------------------------------------------------------
-
-import { initializeServices, getAuthUser } from "./config.js";
+import { initializeServices, getAuthUser } from "./config.js"; 
 import { fetchQuestions, saveResult } from "./api.js";
 import * as UI from "./ui-renderer.js";
-import {
-  checkAccess, initializeAuthListener,
-  signInWithGoogle, signOut
-} from "./auth-paywall.js";
-import curriculumData from "./curriculum.js";
+import { checkAccess, initializeAuthListener } from "./auth-paywall.js";
 
-/* 🔵 NEW: result feedback helper (ADD ONLY) */
-import { getResultFeedback } from "./ui-renderer.js";
-
-// 🔥 Injected at automation time — DO NOT HARD CODE
-const CLASS_ID = "10";
-
-// ===========================================================
-// STATE
-// ===========================================================
 let quizState = {
-  classId: CLASS_ID,
-  subject: "",
-  topicSlug: "",
-  difficulty: "",
-  questions: [],
-  currentQuestionIndex: 0,
-  userAnswers: {},
-  isSubmitted: false,
-  score: 0,
+    classId: "",
+    subject: "",
+    topicSlug: "",
+    difficulty: "",
+    questions: [],
+    currentQuestionIndex: 0,
+    userAnswers: {},
+    isSubmitted: false
 };
 
-// ===========================================================
-// SMART CHAPTER LOOKUP (fallback)
-// ===========================================================
-function findCurriculumMatch(topicSlug) {
-  const clean = s =>
-    s?.toLowerCase()
-      .replace(/quiz/g, "")
-      .replace(/[_\s-]/g, "")
-      .trim();
-
-  const target = clean(topicSlug);
-
-  for (const subject in curriculumData) {
-    for (const book in curriculumData[subject]) {
-      for (const ch of curriculumData[subject][book]) {
-        if (clean(ch.table_id) === target) return { subject, title: ch.chapter_title };
-        if (clean(ch.chapter_title) === target) return { subject, title: ch.chapter_title };
-      }
-    }
-  }
-  return null;
-}
-
-// ===========================================================
-// URL + HEADER FORMAT
-// ===========================================================
-function parseUrlParameters() {
-  const params = new URLSearchParams(location.search);
-
-  const urlClass    = params.get("class")   || CLASS_ID;
-  const urlSubject  = params.get("subject") || "";
-  const urlBook     = params.get("book")    || null;
-  const urlChapter  = params.get("chapter") || "";
-  const urlTable    = params.get("table")   || params.get("topic") || "";
-  let   urlDiff     = params.get("difficulty") || "Simple";
-
-  const allowed = ["Simple","Medium","Advanced"];
-  if (!allowed.includes(urlDiff)) urlDiff = "Simple";
-
-  quizState.classId   = urlClass;
-  quizState.subject   = urlSubject;
-  quizState.topicSlug = urlTable;
-  quizState.difficulty = urlDiff;
-
-  if (!quizState.topicSlug) {
-    throw new Error("Topic/table not provided in URL");
-  }
-
-  if (urlSubject && urlChapter) {
-    const headerTitle =
-      `Class ${quizState.classId}: ${urlSubject.trim()} - ${urlChapter.trim()} Worksheet`;
-    UI.updateHeader(headerTitle, quizState.difficulty);
-    return;
-  }
-
-  const match = findCurriculumMatch(quizState.topicSlug);
-
-  if (!match) {
-    quizState.subject = "General";
-    const pretty = quizState.topicSlug
-      .replace(/_/g, " ")
-      .replace(/quiz/ig, "")
-      .replace(/[0-9]/g, "")
-      .trim()
-      .replace(/\b\w/g, c => c.toUpperCase());
-
-    UI.updateHeader(
-      `Class ${quizState.classId}: ${pretty} Worksheet`,
-      quizState.difficulty
-    );
-    return;
-  }
-
-  quizState.subject = match.subject;
-  UI.updateHeader(
-    `Class ${quizState.classId}: ${quizState.subject} - ${match.title.replace(/quiz/ig, "").trim()} Worksheet`,
-    quizState.difficulty
-  );
-}
-
-// ===========================================================
-// 🔥 NEW: EVENT DECOUPLING (Rule 5)
-// ===========================================================
 /**
- * Handles the "Request More Questions" button click event.
- * @param {object} context - Context containing difficulty, percentage, etc. from feedback.
+ * Parses URL parameters to set quiz state and cleans the header slug.
  */
-function handleRequestMore(context) {
-  const user = getAuthUser();
+function parseUrlParameters() {
+    const params = new URLSearchParams(location.search);
+    quizState.topicSlug = params.get("table") || params.get("topic") || "";
+    quizState.difficulty = params.get("difficulty") || "Simple";
+    quizState.classId = params.get("class") || "11";
+    quizState.subject = params.get("subject") || "Physics";
 
-  // Rule 5: Emit a structured event instead of direct action (email/generation)
-  const eventData = {
-    event: "requestMoreQuestions",
-    timestamp: new Date().toISOString(),
-    payload: {
-      classId: quizState.classId,
-      subject: quizState.subject,
-      topic: quizState.topicSlug,
-      difficulty: quizState.difficulty,
-      percentage: context.percentage,
-      userEmail: user?.email || "anonymous",
-      // Optionally include userId if available
-      userId: user?.uid || null
-    }
-  };
-
-  console.log("🔥 Event Fired:", eventData);
-  
-  // Dispatch a custom DOM event for other listeners (e.g., a background service)
-  const customEvent = new CustomEvent('quizEngineEvent', { detail: eventData });
-  document.dispatchEvent(customEvent);
-
-  // Provide UI feedback (optional)
-  UI.showStatus("Request submitted! You will be notified when new questions are ready.", "text-green-700");
+    // FIXED: Capture entire chapter name and prevent Subject repetition in Header
+    let chapterPart = quizState.topicSlug.replace(/[_\d]/g, " ").replace(/quiz/ig, "").trim();
+    
+    // Deduplicate: Remove subject from the start if it repeats (e.g., "Physics Physics")
+    const subjectRegex = new RegExp(`^${quizState.subject}\\s*`, 'i');
+    chapterPart = chapterPart.replace(subjectRegex, "").trim();
+    const cleanName = chapterPart.replace(/\b\w/g, c => c.toUpperCase());
+    
+    const fullTitle = `Class ${quizState.classId}: ${quizState.subject} - ${cleanName} Worksheet`;
+    UI.updateHeader(fullTitle, quizState.difficulty);
 }
 
+/**
+ * Fetches data and handles complex AR string separation for specific database tables.
+ */
+async function loadQuiz() {
+    try {
+        UI.showStatus("Preparing worksheet...", "text-blue-600 font-bold");
+        const rawQuestions = await fetchQuestions(quizState.topicSlug, quizState.difficulty);
+        
+        quizState.questions = rawQuestions.map(q => {
+            let processedText = q.question_text || "";
+            let processedReason = q.scenario_reason_text || "";
+            const type = (q.question_type || "").toLowerCase();
 
-// ===========================================================
-// RENDERING + SUBMIT + STORAGE + EVENTS
-// ===========================================================
+            // FIXED: Handle Assertion and Reason separation across multiple fields
+            if (type.includes("ar") || type.includes("assertion")) {
+                // Check if combined in scenario_reason_text
+                if (processedReason.includes("Assertion (A):") && processedReason.includes("Reason (R):")) {
+                    const parts = processedReason.split(/Reason\s*\(R\)\s*:/i);
+                    processedText = parts[0].replace(/Assertion\s*\(A\)\s*:/i, "").trim();
+                    processedReason = parts[1].trim();
+                } 
+                // Check if combined in question_text
+                else if (processedText.includes("Reason (R):")) {
+                    const parts = processedText.split(/Reason\s*\(R\)\s*:/i);
+                    processedText = parts[0].trim();
+                    processedReason = parts[1].trim();
+                }
+            }
+
+            return {
+                id: q.id,
+                question_type: type,
+                text: processedText,
+                scenario_reason: processedReason, 
+                correct_answer: (q.correct_answer_key || "").toUpperCase(),
+                options: { 
+                    A: q.option_a || "", B: q.option_b || "", 
+                    C: q.option_c || "", D: q.option_d || "" 
+                }
+            };
+        });
+
+        if (quizState.questions.length > 0) {
+            UI.hideStatus(); // Clears "Preparing worksheet..." on load
+            renderQuestion();
+            UI.showView("quiz-content");
+        }
+    } catch (e) {
+        UI.showStatus(`Error: ${e.message}`, "text-red-600");
+    }
+}
+
 function renderQuestion() {
-  const i = quizState.currentQuestionIndex;
-  const q = quizState.questions[i];
-  if (!q) return UI.showStatus("No question to display.");
-
-  UI.renderQuestion(q, i + 1, quizState.userAnswers[q.id], quizState.isSubmitted);
-  UI.updateNavigation?.(i, quizState.questions.length, quizState.isSubmitted);
-  UI.hideStatus();
-}
-
-function handleNavigation(delta) {
-  const i = quizState.currentQuestionIndex + delta;
-  if (i >= 0 && i < quizState.questions.length) {
-    quizState.currentQuestionIndex = i;
-    renderQuestion();
-  }
+    const q = quizState.questions[quizState.currentQuestionIndex];
+    UI.renderQuestion(q, quizState.currentQuestionIndex + 1, quizState.userAnswers[q.id], quizState.isSubmitted);
+    UI.updateNavigation(quizState.currentQuestionIndex, quizState.questions.length, quizState.isSubmitted);
 }
 
 function handleAnswerSelection(id, opt) {
-  if (!quizState.isSubmitted) {
-    quizState.userAnswers[id] = opt;
-    renderQuestion();
-  }
+    if (!quizState.isSubmitted) {
+        quizState.userAnswers[id] = opt;
+        renderQuestion();
+    }
 }
 
+function handleNavigation(delta) {
+    quizState.currentQuestionIndex += delta;
+    renderQuestion();
+}
+
+/**
+ * Calculates category performance for cognitive feedback.
+ */
 async function handleSubmit() {
-  if (quizState.isSubmitted) return;
-  quizState.isSubmitted = true;
+    quizState.isSubmitted = true;
+    const stats = {
+        total: quizState.questions.length,
+        correct: quizState.questions.filter(q => quizState.userAnswers[q.id] === q.correct_answer).length,
+        mcq: { c: 0, w: 0, t: 0 }, ar: { c: 0, w: 0, t: 0 }, case: { c: 0, w: 0, t: 0 }
+    };
 
-  quizState.score = quizState.questions.filter(q =>
-    quizState.userAnswers[q.id]?.toUpperCase() === q.correct_answer?.toUpperCase()
-  ).length;
+    quizState.questions.forEach(q => {
+        const type = q.question_type.toLowerCase();
+        const isCorrect = quizState.userAnswers[q.id] === q.correct_answer;
+        let cat = type.includes('ar') ? 'ar' : type.includes('case') ? 'case' : 'mcq';
+        stats[cat].t++;
+        isCorrect ? stats[cat].c++ : stats[cat].w++;
+    });
 
-  const user = getAuthUser();
-  const result = {
-    classId: quizState.classId,
-    subject: quizState.subject,
-    topic: quizState.topicSlug,
-    difficulty: quizState.difficulty,
-    score: quizState.score,
-    total: quizState.questions.length,
-    user_answers: quizState.userAnswers,
-  };
-
-  if (user) {
-    try {
-      await saveResult(result);
-    } catch (e) {
-      console.warn(e);
-    }
-  }
-
-  quizState.currentQuestionIndex = 0;
-  renderQuestion();
-
-  /* 🔵 NEW: feedback evaluation (ADD ONLY) */
-  const feedback = getResultFeedback({
-    score: quizState.score,
-    total: quizState.questions.length,
-    difficulty: quizState.difficulty,
-  });
-
-  UI.showResults(quizState.score, quizState.questions.length);
-
-  /* 🔵 NEW: pass message + button visibility + handler to UI */
-  UI.showResultFeedback?.(feedback, handleRequestMore); // <-- CHANGED: Pass handler here
-
-  UI.renderAllQuestionsForReview?.(
-    quizState.questions,
-    quizState.userAnswers
-  );
-
-  UI.updateNavigation?.(0, quizState.questions.length, true);
+    UI.renderResults(stats, quizState.difficulty);
 }
 
-async function loadQuiz() {
-  try {
-    UI.showStatus("Fetching questions...");
-
-    const q = await fetchQuestions(quizState.topicSlug, quizState.difficulty);
-    if (!q?.length) throw new Error("No questions found.");
-
-    quizState.questions   = q;
-    quizState.userAnswers = Object.fromEntries(q.map(x => [x.id, null]));
-
-    renderQuestion();
-    UI.attachAnswerListeners?.(handleAnswerSelection);
-    UI.showView?.("quiz-content");
-  } catch (e) {
-    UI.showStatus(`Error: ${e.message}`, "text-red-600");
-  }
-}
-
-async function onAuthChange(user) {
-  // Update UI based on auth state
-  UI.updateAuthUI?.(user);
-
-  const ok = user && await checkAccess(quizState.topicSlug);
-  if (ok) {
-    loadQuiz();
-  } else {
-    UI.showView("paywall-screen");
-  }
-}
-
+/**
+ * Event listeners including fixed navigation logic.
+ */
 function attachDomEvents() {
-  document.addEventListener("click", e => {
-    const b = e.target.closest("button,a");
-    if (!b) return;
+    document.addEventListener("click", e => {
+        const btn = e.target.closest("button, a");
+        if (!btn) return;
 
-    if (b.id === "prev-btn")   return handleNavigation(-1);
-    if (b.id === "next-btn")   return handleNavigation(1);
-    if (b.id === "submit-btn") return handleSubmit();
-
-    if (["login-btn","google-signin-btn","paywall-login-btn"].includes(b.id))
-      return signInWithGoogle();
-
-    if (b.id === "logout-nav-btn") return signOut();
-
-    // ⭐ FIX APPLIED: Construct the URL with the quizState.subject parameter
-    if (b.id === "back-to-chapters-btn") {
-      if (quizState.subject) {
-        location.href = `chapter-selection.html?subject=${quizState.subject}`;
-      } else {
-        // Fallback
-        location.href = "chapter-selection.html";
-      }
-    }
-  });
+        if (btn.id === "prev-btn") handleNavigation(-1);
+        if (btn.id === "next-btn") handleNavigation(1);
+        if (btn.id === "submit-btn") handleSubmit();
+        if (btn.id === "btn-review-errors") UI.renderAllQuestionsForReview(quizState.questions, quizState.userAnswers);
+        
+        // FIXED: Reliable Back to Chapter Selection
+        if (btn.id === "back-to-chapters-btn") {
+            const subject = quizState.subject || "Physics";
+            window.location.href = `chapter-selection.html?subject=${encodeURIComponent(subject)}`;
+        }
+    });
 }
 
+/**
+ * App Lifecycle Initialization
+ */
 async function init() {
-  UI.initializeElements();
-  parseUrlParameters();
-  await initializeServices();
-  await initializeAuthListener(onAuthChange);
-  attachDomEvents();
-  UI.hideStatus();
+  UI.initializeElements();
+  parseUrlParameters();
+  attachDomEvents();
+  UI.attachAnswerListeners(handleAnswerSelection);
+  
+  await initializeServices(); 
+  await initializeAuthListener(user => {
+      if (user) loadQuiz();
+      else UI.showView("paywall-screen");
+  });
 }
 
 document.addEventListener("DOMContentLoaded", init);
