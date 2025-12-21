@@ -1,175 +1,64 @@
-<script type="module">
-import curriculum from "./js/curriculum.js";
-import { transliterate as tr } from "https://cdn.jsdelivr.net/npm/transliteration/+esm";
-// NEW: Import authentication tools to identify students
-import { signInWithGoogle, checkAccess } from "./js/auth-paywall.js";
+import { initializeServices, getInitializedClients } from "./config.js";
+import { 
+  GoogleAuthProvider, signInWithPopup, onAuthStateChanged, 
+  setPersistence, browserLocalPersistence, signOut as firebaseSignOut 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { 
+  getFirestore, doc, setDoc, getDoc, serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-const CLASS_ID = "{{CLASS}}";
-const subject  = new URLSearchParams(location.search).get("subject") || "";
+const LOG = "[AUTH]";
+const ADMIN_EMAILS = ["keshav.karn@gmail.com", "ready4urexam@gmail.com"];
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: "select_account" });
 
-const content      = document.getElementById("content-container");
-const diffBox      = document.getElementById("difficulty-container");
-const startBtn     = document.getElementById("start-quiz");
-const errorMsg     = document.getElementById("error-msg");
-const subjectDesc  = document.getElementById("subject-desc");
+/**
+ * Creates user record if missing. 
+ * Matches Admin Portal structure (Object for classes, String for streams).
+ */
+export async function ensureUserInFirestore(user) {
+  if (!user?.uid) return;
+  const { db } = getInitializedClients();
+  const ref = doc(db, "users", user.uid);
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName,
+        paidClasses: { "6":false,"7":false,"8":false,"9":false,"10":false,"11":false,"12":false },
+        streams: "",
+        role: ADMIN_EMAILS.includes(user.email?.toLowerCase()) ? "admin" : "student",
+        signupDate: serverTimestamp()
+      });
+    }
+  } catch (e) { console.warn(LOG, "Sync deferred", e); }
+}
 
-let selectedBook = null;
-let selectedChapter = null;
-let selectedDifficulty = null;
-
-// Subject Metadata
-const meta = {
-  Physics: "Explore mechanics, waves & thermodynamics.",
-  Chemistry: "Atoms, reactions, bonding & periodicity.",
-  Biology: "Cells, plants, human body & ecosystems.",
-  Mathematics: "Numbers, algebra, geometry & graphs.",
-  Hindi: "हिंदी साहित्य और व्याकरण का अभ्यास करें।"
-};
-subjectDesc.textContent = meta[subject] || "";
-
-/* --------------------------
-   BOOK LISTING
---------------------------- */
-function renderBooks(){
-  const data = curriculum[subject];
-  document.getElementById("page-title").textContent = `Select Book`;
-  
-  if (!data) {
-    content.innerHTML = "<p class='text-center text-gray-500'>No data available for this subject.</p>";
-    return;
-  }
-
-  const fragment = document.createDocumentFragment();
-  Object.keys(data).forEach(book => {
-    const btn = document.createElement("button");
-    btn.className = "topic-btn font-semibold text-lg";
-    btn.textContent = book;
-    btn.onclick = () => renderChapters(book);
-    fragment.appendChild(btn);
+export async function initializeAuthListener(callback) {
+  await initializeServices();
+  const { auth } = getInitializedClients();
+  setPersistence(auth, browserLocalPersistence).catch(() => {});
+  onAuthStateChanged(auth, (user) => {
+    if (user) ensureUserInFirestore(user);
+    if (callback) callback(user);
   });
-
-  content.innerHTML = "";
-  content.appendChild(fragment);
-  diffBox.classList.add("hidden");
-  startBtn.disabled = true;
 }
 
-/* --------------------------
-   CHAPTER LISTING
---------------------------- */
-function renderChapters(book){
-  selectedBook = book;
-  const chapters = curriculum[subject][book];
-  document.getElementById("page-title").textContent = book;
-
-  const fragment = document.createDocumentFragment();
-  chapters.forEach(ch => {
-    const title = ch.chapter_title || ch.title || ch;
-    const btn = document.createElement("button");
-    btn.className = "topic-btn";
-    btn.textContent = title;
-    btn.onclick = (e) => selectChapter(title, e.currentTarget);
-    fragment.appendChild(btn);
-  });
-
-  const back = document.createElement("button");
-  back.className = "w-full text-cbse-blue font-bold py-2 mt-2 hover:underline";
-  back.textContent = "← Change Book";
-  back.onclick = renderBooks;
-  fragment.appendChild(back);
-
-  content.innerHTML = "";
-  content.appendChild(fragment);
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-/* --------------------------
-   CHAPTER SELECTION
---------------------------- */
-function selectChapter(title, button){
-  document.querySelectorAll(".topic-btn").forEach(b => b.classList.remove("selected"));
-  button.classList.add("selected");
-
-  selectedChapter = title;
-  diffBox.classList.remove("hidden");
-  
-  setTimeout(() => {
-    diffBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, 100);
-}
-
-/* --------------------------
-   DIFFICULTY SELECTION
---------------------------- */
-document.querySelectorAll(".difficulty-btn").forEach(btn => {
-  btn.onclick = e => {
-    document.querySelectorAll(".difficulty-btn").forEach(x => x.classList.remove("selected"));
-    e.target.classList.add("selected");
-    selectedDifficulty = e.target.dataset.diff;
-    startBtn.disabled = false;
-    errorMsg.classList.add("hidden");
-  };
-});
-
-/* --------------------------
-   TABLE NAME GENERATOR
---------------------------- */
-function buildTableName(chapter){
-  let chapterSlug = tr(chapter || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const skip = ["as","of","the","a","an","in","on","for","to","ki","ke","ka"];
-  const words = chapterSlug.split(" ").filter(w => !skip.includes(w));
-
-  const first = words[0] || "ch";
-  const last  = words[words.length - 1] || "x";
-
-  let subjectSlug = tr(subject)
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
-    .split(" ")[0] || "sub";
-
-  return `${subjectSlug}_${first}_${last}_${CLASS_ID}_quiz`;
-}
-
-/* --------------------------
-   START QUIZ (WITH AUTH GATE)
---------------------------- */
-startBtn.onclick = async () => {
-  if (!selectedChapter || !selectedDifficulty) {
-    errorMsg.textContent = "Please select a chapter and difficulty.";
-    errorMsg.classList.remove("hidden");
-    return;
+export async function signInWithGoogle() {
+  const { auth } = getInitializedClients();
+  try {
+    const res = await signInWithPopup(auth, provider);
+    await ensureUserInFirestore(res.user);
+    return res.user;
+  } catch (e) {
+    alert("Login failed. Check if popups are blocked.");
+    return null;
   }
+}
 
-  // 1. Check if user is already logged in
-  let user = checkAccess(); 
-
-  // 2. Mandatory Login: If not logged in, trigger Google Sign-In
-  if (!user) {
-    user = await signInWithGoogle();
-  }
-
-  // 3. Proceed to Quiz only if authenticated
-  if (user) {
-    const table = buildTableName(selectedChapter);
-    const params = new URLSearchParams({
-      class: CLASS_ID,
-      subject,
-      book: selectedBook,
-      chapter: selectedChapter,
-      difficulty: selectedDifficulty,
-      table
-    });
-    location.href = `quiz-engine.html?${params.toString()}`;
-  } else {
-    errorMsg.textContent = "Login is required to attempt the quiz.";
-    errorMsg.classList.remove("hidden");
-  }
+export const checkAccess = () => {
+  try { return !!getInitializedClients().auth.currentUser; } 
+  catch { return false; }
 };
-
-renderBooks();
-</script>

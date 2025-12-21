@@ -1,7 +1,10 @@
+// template/js/quiz-engine.js
 import { initializeServices, getAuthUser } from "./config.js"; 
 import { fetchQuestions, saveResult } from "./api.js";
 import * as UI from "./ui-renderer.js";
 import { checkAccess, initializeAuthListener } from "./auth-paywall.js";
+// NEW: Import access check logic
+import { checkClassAccess } from "./firebase-expiry.js";
 
 let quizState = {
     classId: "",
@@ -24,10 +27,8 @@ function parseUrlParameters() {
     quizState.classId = params.get("class") || "11";
     quizState.subject = params.get("subject") || "Physics";
 
-    // FIXED: Capture entire chapter name and prevent Subject repetition in Header
     let chapterPart = quizState.topicSlug.replace(/[_\d]/g, " ").replace(/quiz/ig, "").trim();
     
-    // Deduplicate: Remove subject from the start if it repeats (e.g., "Physics Physics")
     const subjectRegex = new RegExp(`^${quizState.subject}\\s*`, 'i');
     chapterPart = chapterPart.replace(subjectRegex, "").trim();
     const cleanName = chapterPart.replace(/\b\w/g, c => c.toUpperCase());
@@ -37,7 +38,7 @@ function parseUrlParameters() {
 }
 
 /**
- * Fetches data and handles complex AR string separation for specific database tables.
+ * Fetches data from Supabase and handles Assertion/Reason logic.
  */
 async function loadQuiz() {
     try {
@@ -49,15 +50,12 @@ async function loadQuiz() {
             let processedReason = q.scenario_reason_text || "";
             const type = (q.question_type || "").toLowerCase();
 
-            // FIXED: Handle Assertion and Reason separation across multiple fields
             if (type.includes("ar") || type.includes("assertion")) {
-                // Check if combined in scenario_reason_text
                 if (processedReason.includes("Assertion (A):") && processedReason.includes("Reason (R):")) {
                     const parts = processedReason.split(/Reason\s*\(R\)\s*:/i);
                     processedText = parts[0].replace(/Assertion\s*\(A\)\s*:/i, "").trim();
                     processedReason = parts[1].trim();
                 } 
-                // Check if combined in question_text
                 else if (processedText.includes("Reason (R):")) {
                     const parts = processedText.split(/Reason\s*\(R\)\s*:/i);
                     processedText = parts[0].trim();
@@ -79,7 +77,7 @@ async function loadQuiz() {
         });
 
         if (quizState.questions.length > 0) {
-            UI.hideStatus(); // Clears "Preparing worksheet..." on load
+            UI.hideStatus();
             renderQuestion();
             UI.showView("quiz-content");
         }
@@ -106,9 +104,6 @@ function handleNavigation(delta) {
     renderQuestion();
 }
 
-/**
- * Calculates category performance for cognitive feedback.
- */
 async function handleSubmit() {
     quizState.isSubmitted = true;
     const stats = {
@@ -126,11 +121,10 @@ async function handleSubmit() {
     });
 
     UI.renderResults(stats, quizState.difficulty);
+    // Save results to Firestore
+    saveResult({ ...quizState, score: stats.correct, total: stats.total });
 }
 
-/**
- * Event listeners including fixed navigation logic.
- */
 function attachDomEvents() {
     document.addEventListener("click", e => {
         const btn = e.target.closest("button, a");
@@ -141,7 +135,6 @@ function attachDomEvents() {
         if (btn.id === "submit-btn") handleSubmit();
         if (btn.id === "btn-review-errors") UI.renderAllQuestionsForReview(quizState.questions, quizState.userAnswers);
         
-        // FIXED: Reliable Back to Chapter Selection
         if (btn.id === "back-to-chapters-btn") {
             const subject = quizState.subject || "Physics";
             window.location.href = `chapter-selection.html?subject=${encodeURIComponent(subject)}`;
@@ -150,7 +143,7 @@ function attachDomEvents() {
 }
 
 /**
- * App Lifecycle Initialization
+ * App Lifecycle Initialization: Gates access based on Auth and Trial Status.
  */
 async function init() {
   UI.initializeElements();
@@ -159,9 +152,23 @@ async function init() {
   UI.attachAnswerListeners(handleAnswerSelection);
   
   await initializeServices(); 
-  await initializeAuthListener(user => {
-      if (user) loadQuiz();
-      else UI.showView("paywall-screen");
+  
+  // Final Auth Gate
+  await initializeAuthListener(async (user) => {
+      if (user) {
+          // Verify trial/expiry status before loading quiz
+          const access = await checkClassAccess(quizState.classId, quizState.subject);
+          if (access.allowed) {
+              loadQuiz();
+          } else {
+              // Redirect to index if trial ended or manually blocked
+              alert(access.reason || "Access Restricted.");
+              location.href = "index.html";
+          }
+      } else {
+          // Force sign-in screen if not logged in
+          UI.showView("paywall-screen");
+      }
   });
 }
 

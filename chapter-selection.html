@@ -1,80 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Select Book & Chapter — Class 10</title>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme:{
-        extend:{
-          fontFamily:{sans:['Inter','sans-serif']},
-          colors:{'cbse-blue':'#1a3e6a','cbse-light':'#f5f7fa','accent-gold':'#ffb703'}
-        }
-      }
-    }
-  </script>
-
-  <style>
-    .topic-btn{
-      width:100%;padding:1rem;margin-bottom:.75rem;border-radius:.75rem;background:#fff;
-      border:1px solid #d1d5db;cursor:pointer;text-align:left;box-shadow:0 2px 6px rgba(2,6,23,.05);transition:.2s;
-    }
-    .topic-btn:hover{background:#f5f7fa; transform: translateY(-1px);}
-    .topic-btn.selected{border-color:#1a3e6a;background:#eff6ff;ring:2px solid #1a3e6a}
-
-    .difficulty-btn{
-      padding:.6rem 1.25rem;border-radius:.75rem;font-weight:600;cursor:pointer;transition:.2s;
-      opacity: 0.8;
-    }
-    .difficulty-btn:hover{opacity: 1;}
-    .difficulty-btn.selected{opacity: 1; box-shadow:0 6px 18px rgba(26,62,106,.2); transform: scale(1.05);}
-  </style>
-</head>
-
-<body class="bg-cbse-light min-h-screen flex flex-col">
-
-<header class="bg-cbse-blue py-4 shadow-lg">
-  <div class="max-w-6xl mx-auto flex justify-between items-center px-6">
-    <h1 class="text-2xl font-extrabold text-accent-gold">Ready4<span class="text-white">Exam</span></h1>
-    <button onclick="location.href='index.html'" class="text-white underline">← Back</button>
-  </div>
-</header>
-
-<main class="flex-grow max-w-3xl mx-auto px-4 py-8 w-full">
-  <h2 id="page-title" class="text-3xl font-extrabold text-cbse-blue mb-2 text-center">Select Book</h2>
-  <p id="subject-desc" class="text-center text-gray-600 mb-8 font-medium"></p>
-
-  <div id="content-container" class="space-y-2 mb-8"></div>
-
-  <div id="difficulty-container" class="hidden mb-10 p-6 bg-white rounded-xl shadow-sm border border-gray-100 text-center">
-    <h3 class="text-xl font-bold text-cbse-blue mb-4">Choose Difficulty Level</h3>
-    <div class="flex flex-wrap justify-center gap-4">
-      <button data-diff="Simple"   class="difficulty-btn bg-green-600 text-white">Simple</button>
-      <button data-diff="Medium"   class="difficulty-btn bg-yellow-500 text-white">Medium</button>
-      <button data-diff="Advanced" class="difficulty-btn bg-red-600 text-white">Advanced</button>
-    </div>
-  </div>
-
-  <p id="error-msg" class="hidden text-center text-red-500 mb-4 font-semibold"></p>
-
-  <div class="text-center sticky bottom-6 md:static">
-    <button id="start-quiz" disabled
-      class="w-full md:w-auto px-12 py-4 bg-cbse-blue text-white rounded-xl font-bold text-lg hover:bg-blue-800 transition shadow-lg disabled:opacity-40 disabled:cursor-not-allowed">
-      Start Quiz
-    </button>
-  </div>
-</main>
-
-<footer class="bg-cbse-blue py-6 text-center text-white mt-12">
-  <small>© 2025 Ready4Exam Academic Portal</small>
-</footer>
-
 <script type="module">
 import curriculum from "./js/curriculum.js";
 import { transliterate as tr } from "https://cdn.jsdelivr.net/npm/transliteration/+esm";
+
+// ALIGNED: Imports the non-blocking auth tools from your template/js folder
+import { signInWithGoogle, checkAccess } from "./js/auth-paywall.js";
 
 const CLASS_ID = "10";
 const subject  = new URLSearchParams(location.search).get("subject") || "";
@@ -89,7 +18,7 @@ let selectedBook = null;
 let selectedChapter = null;
 let selectedDifficulty = null;
 
-// Subject Metadata
+// Subject Metadata - NO CHANGES
 const meta = {
   Physics: "Explore mechanics, waves & thermodynamics.",
   Chemistry: "Atoms, reactions, bonding & periodicity.",
@@ -100,7 +29,7 @@ const meta = {
 subjectDesc.textContent = meta[subject] || "";
 
 /* --------------------------
-   BOOK LISTING (Optimized)
+   BOOK LISTING - NO CHANGES
 --------------------------- */
 function renderBooks(){
   const data = curriculum[subject];
@@ -127,7 +56,7 @@ function renderBooks(){
 }
 
 /* --------------------------
-   CHAPTER LISTING (Optimized)
+   CHAPTER LISTING - NO CHANGES
 --------------------------- */
 function renderChapters(book){
   selectedBook = book;
@@ -156,7 +85,7 @@ function renderChapters(book){
 }
 
 /* --------------------------
-   CHAPTER SELECTION
+   CHAPTER SELECTION - NO CHANGES
 --------------------------- */
 function selectChapter(title, button){
   document.querySelectorAll(".topic-btn").forEach(b => b.classList.remove("selected"));
@@ -165,14 +94,13 @@ function selectChapter(title, button){
   selectedChapter = title;
   diffBox.classList.remove("hidden");
   
-  // Mobile focus: scroll to difficulty
   setTimeout(() => {
     diffBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, 100);
 }
 
 /* --------------------------
-   DIFFICULTY SELECTION
+   DIFFICULTY SELECTION - NO CHANGES
 --------------------------- */
 document.querySelectorAll(".difficulty-btn").forEach(btn => {
   btn.onclick = e => {
@@ -185,10 +113,9 @@ document.querySelectorAll(".difficulty-btn").forEach(btn => {
 });
 
 /* --------------------------
-   CRITICAL: TABLE NAME GENERATOR
+   TABLE NAME GENERATOR - NO CHANGES
 --------------------------- */
 function buildTableName(chapter){
-  // Transliteration is essential here for Hindi chapters
   let chapterSlug = tr(chapter || "")
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, " ")
@@ -210,31 +137,42 @@ function buildTableName(chapter){
 }
 
 /* --------------------------
-   START QUIZ
+   START QUIZ (WITH AUTH GATE)
+   ALIGNED: Mandatory login before quiz starts
 --------------------------- */
-startBtn.onclick = () => {
+startBtn.onclick = async () => {
   if (!selectedChapter || !selectedDifficulty) {
     errorMsg.textContent = "Please select a chapter and difficulty.";
     errorMsg.classList.remove("hidden");
     return;
   }
 
-  const table = buildTableName(selectedChapter);
-  const params = new URLSearchParams({
-    class: CLASS_ID,
-    subject,
-    book: selectedBook,
-    chapter: selectedChapter,
-    difficulty: selectedDifficulty,
-    table
-  });
+  // 1. Check if user is already logged in via existing session
+  let user = checkAccess(); 
 
-  location.href = `quiz-engine.html?${params.toString()}`;
+  // 2. Mandatory Login: If not logged in, trigger Google Sign-In popup
+  if (!user) {
+    user = await signInWithGoogle();
+  }
+
+  // 3. Proceed to Quiz only if authenticated
+  if (user) {
+    const table = buildTableName(selectedChapter);
+    const params = new URLSearchParams({
+      class: CLASS_ID,
+      subject,
+      book: selectedBook,
+      chapter: selectedChapter,
+      difficulty: selectedDifficulty,
+      table
+    });
+    // Redirects to quiz with student identity captured
+    location.href = `quiz-engine.html?${params.toString()}`;
+  } else {
+    errorMsg.textContent = "Login is required to attempt the quiz.";
+    errorMsg.classList.remove("hidden");
+  }
 };
 
-// Initial Load
 renderBooks();
 </script>
-
-</body>
-</html>
