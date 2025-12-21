@@ -45,7 +45,7 @@ export function initializeElements() {
 }
 
 /* -----------------------------------
-   MOTIVATIONAL FEEDBACK (UNCHANGED)
+   MOTIVATIONAL FEEDBACK
 ----------------------------------- */
 function getMotivationalFeedback(score, total) {
     const p = (score / total) * 100;
@@ -65,9 +65,9 @@ function generateOptionHtml(q, opt, selected, submitted, labelText) {
     const isWrong = submitted && isSel && !isCorrect;
 
     const borderCls =
-        isCorrect ? "border-green-600 bg-green-50 shadow-green-100" :
-        isWrong ? "border-red-600 bg-red-50 shadow-red-100" :
-        isSel ? "border-blue-500 bg-blue-50 shadow-blue-100" :
+        isCorrect ? "border-green-600 bg-green-50" :
+        isWrong ? "border-red-600 bg-red-50" :
+        isSel ? "border-blue-500 bg-blue-50" :
         "border-gray-100 bg-white hover:border-blue-300";
 
     return `
@@ -76,9 +76,7 @@ function generateOptionHtml(q, opt, selected, submitted, labelText) {
                 ${isSel ? "checked" : ""} ${submitted ? "disabled" : ""}>
             <div class="flex items-start p-4 border-2 rounded-xl transition-all ${borderCls}">
                 <span class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 font-bold mr-4">${opt}</span>
-                <span class="font-medium pt-1 text-gray-800 leading-snug">
-                    ${cleanKatexMarkers(text)}
-                </span>
+                <span class="font-medium pt-1">${cleanKatexMarkers(text)}</span>
             </div>
         </label>`;
 }
@@ -92,138 +90,113 @@ export function renderQuestion(q, idx, selected, submitted) {
 
     const type = (q.question_type || "").toLowerCase();
 
-    /* =====================================================
-       ASSERTION–REASON (ROBUST / DEFENSIVE)
-    ===================================================== */
+    /* ===== ASSERTION–REASON (ROBUST) ===== */
     if (type.includes("ar") || type.includes("assertion")) {
-
         let assertionText = q.text || "";
         let reasonText = q.scenario_reason || "";
 
-        // Case 1: Reason contains both Assertion + Reason
-        if (
-            reasonText.toLowerCase().includes("assertion") &&
-            reasonText.toLowerCase().includes("reason")
-        ) {
+        if (reasonText.toLowerCase().includes("assertion") && reasonText.toLowerCase().includes("reason")) {
             const parts = reasonText.split(/Reason\s*\(R\)\s*:/i);
-            assertionText = parts[0]
-                .replace(/Assertion\s*\(A\)\s*:/ig, "")
-                .trim();
+            assertionText = parts[0].replace(/Assertion\s*\(A\)\s*:/ig, "").trim();
             reasonText = (parts[1] || "").trim();
         }
 
-        // Case 2: Assertion text contains Reason
         if (assertionText.toLowerCase().includes("reason")) {
             const parts = assertionText.split(/Reason\s*\(R\)\s*:/i);
-            assertionText = parts[0]
-                .replace(/Assertion\s*\(A\)\s*:/ig, "")
-                .trim();
-            if (!reasonText && parts[1]) {
-                reasonText = parts[1].trim();
-            }
+            assertionText = parts[0].replace(/Assertion\s*\(A\)\s*:/ig, "").trim();
+            if (!reasonText && parts[1]) reasonText = parts[1].trim();
         }
 
-        // Final absolute cleanup
-        assertionText = assertionText
-            .replace(/Assertion\s*\(A\)\s*:/ig, "")
-            .replace(/Reason\s*\(R\)\s*:/ig, "")
-            .trim();
-
-        reasonText = reasonText
-            .replace(/Assertion\s*\(A\)\s*:/ig, "")
-            .replace(/Reason\s*\(R\)\s*:/ig, "")
-            .trim();
+        assertionText = assertionText.replace(/Assertion\s*\(A\)\s*:/ig, "").trim();
+        reasonText = reasonText.replace(/Reason\s*\(R\)\s*:/ig, "").trim();
 
         els.list.innerHTML = `
-            <div class="space-y-6 text-left animate-fadeIn">
-                <div class="text-xl font-extrabold text-gray-900 leading-snug">
-                    Q${idx}. Assertion (A): ${assertionText}
+            <div class="space-y-6">
+                <div class="text-xl font-extrabold">Q${idx}. Assertion (A): ${assertionText}</div>
+                <div class="bg-blue-50 p-6 rounded-2xl border-l-4 border-blue-600">
+                    <span class="text-xs font-black uppercase">Reason (R)</span>
+                    <div class="text-lg font-bold">${reasonText}</div>
                 </div>
-
-                <div class="bg-blue-50 p-6 rounded-2xl border-l-4 border-blue-600 shadow-sm">
-                    <span class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-2 block">
-                        Reason (R)
-                    </span>
-                    <div class="text-lg font-bold text-gray-800">
-                        ${reasonText || "<em>Reason not provided.</em>"}
-                    </div>
-                </div>
-
-                <div class="text-sm font-black text-gray-900 italic px-2">
-                    Regarding the assertion and reason, choose the correct option.
-                </div>
-
+                <div class="italic font-bold">Choose the correct option.</div>
                 <div class="grid gap-3">
-                    ${['A','B','C','D']
-                        .map(o => generateOptionHtml(q, o, selected, submitted, AR_LABELS[o]))
-                        .join("")}
+                    ${['A','B','C','D'].map(o => generateOptionHtml(q, o, selected, submitted, AR_LABELS[o])).join("")}
                 </div>
             </div>`;
         return;
     }
 
-    /* -----------------------------------
-       CASE STUDY
-    ----------------------------------- */
+    /* ===== CASE STUDY ===== */
     if (type.includes("case")) {
         els.list.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left animate-fadeIn">
-                <div class="space-y-6">
-                    <div class="text-xl font-extrabold text-gray-900">
-                        Q${idx}: ${cleanKatexMarkers(q.text)}
-                    </div>
-                    <div class="grid gap-3">
-                        ${['A','B','C','D']
-                            .map(o => generateOptionHtml(q, o, selected, submitted))
-                            .join("")}
+            <div class="grid md:grid-cols-2 gap-8">
+                <div>
+                    <div class="text-xl font-extrabold">Q${idx}: ${q.text}</div>
+                    <div class="grid gap-3 mt-4">
+                        ${['A','B','C','D'].map(o => generateOptionHtml(q, o, selected, submitted)).join("")}
                     </div>
                 </div>
-                <div class="bg-yellow-50 p-6 rounded-2xl border border-yellow-100">
-                    <h3 class="font-black mb-3 text-yellow-700">💡 Study Hint</h3>
-                    <p class="italic text-yellow-900">${q.scenario_reason}</p>
-                </div>
+                <div class="bg-yellow-50 p-6 rounded-2xl italic">${q.scenario_reason}</div>
             </div>`;
         return;
     }
 
-    /* -----------------------------------
-       STANDARD MCQ
-    ----------------------------------- */
+    /* ===== MCQ ===== */
     els.list.innerHTML = `
-        <div class="max-w-3xl mx-auto space-y-6 text-left animate-fadeIn">
-            <div class="text-xl font-extrabold text-gray-900">
-                Q${idx}: ${cleanKatexMarkers(q.text)}
-            </div>
+        <div class="space-y-6">
+            <div class="text-xl font-extrabold">Q${idx}: ${cleanKatexMarkers(q.text)}</div>
             <div class="grid gap-3">
-                ${['A','B','C','D']
-                    .map(o => generateOptionHtml(q, o, selected, submitted))
-                    .join("")}
+                ${['A','B','C','D'].map(o => generateOptionHtml(q, o, selected, submitted)).join("")}
             </div>
         </div>`;
 }
 
 /* -----------------------------------
-   RESULTS (UNCHANGED)
+   RESULTS + COGNITIVE ANALYSIS
 ----------------------------------- */
 export function renderResults(stats, diff) {
     initializeElements();
     showView("results-screen");
 
     if (els.scoreBox) {
-        const motivation = getMotivationalFeedback(stats.correct, stats.total);
         els.scoreBox.innerHTML = `
-            <div class="text-4xl font-black text-blue-900 mb-2">
-                ${stats.correct} / ${stats.total}
-            </div>
-            <div class="text-sm italic text-gray-600">
-                ${motivation}
-            </div>
+            <div class="text-4xl font-black">${stats.correct} / ${stats.total}</div>
+            <div class="italic mt-2">${getMotivationalFeedback(stats.correct, stats.total)}</div>
         `;
+    }
+
+    const analysisBtn = document.getElementById("btn-show-analysis");
+    if (analysisBtn) {
+        analysisBtn.onclick = () => {
+            const getScore = t => stats[t].t ? stats[t].c / stats[t].t : 0;
+
+            const categories = [
+                { name: "Memory Power (MCQ)", score: getScore("mcq"),
+                  high: "🏆 Strong factual recall.",
+                  low: "📖 Revise definitions and facts." },
+                { name: "Logic & Connection (A-R)", score: getScore("ar"),
+                  high: "🧠 Strong reasoning skills.",
+                  low: "🔍 Practice linking causes and effects." },
+                { name: "Real World Use (Case)", score: getScore("case"),
+                  high: "🔬 Excellent application ability.",
+                  low: "🌱 Practice applying concepts." }
+            ];
+
+            els.analysisContent.innerHTML = categories.map(c => `
+                <div class="p-4 rounded-xl ${c.score>=0.7?'bg-green-50':'bg-indigo-50'}">
+                    <div class="flex justify-between">
+                        <b>${c.name}</b><span>${Math.round(c.score*100)}%</span>
+                    </div>
+                    <p class="text-sm mt-2">${c.score>=0.7?c.high:c.low}</p>
+                </div>
+            `).join("");
+
+            els.analysisModal.classList.remove("hidden");
+        };
     }
 }
 
 /* -----------------------------------
-   REVIEW MY MISTAKES (UNCHANGED)
+   REVIEW MY MISTAKES (ENHANCED)
 ----------------------------------- */
 export function renderAllQuestionsForReview(qs, ua) {
     initializeElements();
@@ -231,63 +204,28 @@ export function renderAllQuestionsForReview(qs, ua) {
 
     els.reviewContainer.classList.remove("hidden");
 
-    els.reviewContainer.innerHTML = qs.map((q, i) => {
-        const user = ua[q.id];
-        const correct = q.correct_answer;
-        const isAR = q.question_type.toLowerCase().includes("ar");
-
-        return `
-            <div class="p-6 bg-white rounded-2xl border shadow-sm">
-                <div class="font-black mb-3">
-                    Q${i + 1}. ${cleanKatexMarkers(q.text)}
-                </div>
-                <div class="text-red-600 font-semibold">
-                    ❌ Your Answer: ${user ? (isAR ? AR_LABELS[user] : q.options[user]) : "Not Attempted"}
-                </div>
-                <div class="text-green-700 font-semibold mt-2">
-                    ✅ Correct Answer: ${isAR ? AR_LABELS[correct] : q.options[correct]}
-                </div>
+    els.reviewContainer.innerHTML = `
+        <h3 class="text-3xl font-black text-center mb-8">The Learning Map</h3>
+        ${qs.map((q,i)=>{
+            const u=ua[q.id], c=q.correct_answer, ar=q.question_type.toLowerCase().includes("ar");
+            const txt=k=>ar?AR_LABELS[k]:q.options[k];
+            return `
+            <div class="p-6 bg-white rounded-2xl mb-6">
+                <b>Q${i+1}. ${q.text}</b>
+                <p class="text-red-600 mt-2">Your Answer: ${u?txt(u):"Skipped"}</p>
+                <p class="text-green-700">Correct: ${txt(c)}</p>
             </div>`;
-    }).join("");
+        }).join("")}
+    `;
 }
 
 /* -----------------------------------
-   UI HELPERS (UNCHANGED)
+   UI HELPERS
 ----------------------------------- */
-export function hideStatus() { initializeElements(); els.status?.classList.add("hidden"); }
-export function updateHeader(t, d) { initializeElements(); els.header.textContent = t; els.diff.textContent = `Difficulty: ${d}`; }
-export function showView(v) {
-    initializeElements();
-    [els.quiz, els.results, els.paywall].forEach(x => x?.classList.add("hidden"));
-    if (v === "quiz-content") els.quiz?.classList.remove("hidden");
-    if (v === "results-screen") els.results?.classList.remove("hidden");
-    if (v === "paywall-screen") els.paywall?.classList.remove("hidden");
-}
-export function showStatus(msg, cls = "text-blue-600") {
-    initializeElements();
-    els.status.textContent = msg;
-    els.status.className = `p-4 font-bold ${cls}`;
-    els.status.classList.remove("hidden");
-}
-export function updateNavigation(i, t, s) {
-    initializeElements();
-    els.prev?.classList.toggle("hidden", i === 0);
-    els.next?.classList.toggle("hidden", i === t - 1);
-    els.submit?.classList.toggle("hidden", s || i !== t - 1);
-    els.counter.textContent = `${String(i + 1).padStart(2, "0")} / ${t}`;
-}
-export function attachAnswerListeners(fn) {
-    initializeElements();
-    els.list.onchange = e => {
-        if (e.target.type === "radio") {
-            fn(e.target.name.substring(2), e.target.value);
-        }
-    };
-}
-export function updateAuthUI(user) {
-    initializeElements();
-    if (user && els.welcomeUser) {
-        els.welcomeUser.textContent = `Welcome, ${user.email.split('@')[0]}`;
-        els.welcomeUser.classList.remove("hidden");
-    }
-}
+export function hideStatus(){els.status?.classList.add("hidden");}
+export function updateHeader(t,d){els.header.textContent=t;els.diff.textContent=`Difficulty: ${d}`;}
+export function showView(v){[els.quiz,els.results,els.paywall].forEach(x=>x?.classList.add("hidden"));els[v==="quiz-content"?"quiz":v==="results-screen"?"results":"paywall"]?.classList.remove("hidden");}
+export function showStatus(m,c=""){els.status.textContent=m;els.status.className=c;els.status.classList.remove("hidden");}
+export function updateNavigation(i,t,s){els.prev?.classList.toggle("hidden",i===0);els.next?.classList.toggle("hidden",i===t-1);els.submit?.classList.toggle("hidden",s||i!==t-1);els.counter.textContent=`${i+1}/${t}`;}
+export function attachAnswerListeners(fn){els.list.onchange=e=>{if(e.target.type==="radio")fn(e.target.name.slice(2),e.target.value);};}
+export function updateAuthUI(u){if(u&&els.welcomeUser){els.welcomeUser.textContent=`Welcome, ${u.email.split("@")[0]}`;els.welcomeUser.classList.remove("hidden");}}
