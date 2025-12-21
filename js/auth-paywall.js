@@ -1,7 +1,5 @@
 // js/auth-paywall.js
-// -------------------------------------------------------
-// Firebase Login Paywall (SAFE MINIMAL PATCH)
-// -------------------------------------------------------
+// Optimized: Non-blocking auth flow to ensure "Access for All" 
 
 import {
   initializeServices,
@@ -20,38 +18,26 @@ import {
 import {
   getFirestore,
   doc,
+  setDoc,
   getDoc,
-  runTransaction,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const LOG = "[AUTH]";
 let externalCallback = null;
 
-// Admin emails
+// Hardcoded Admin List
 const ADMIN_EMAILS = ["keshav.karn@gmail.com", "ready4urexam@gmail.com"];
 
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: "select_account" });
 
-/* ----------------------------------------
-   DOM HELPERS
----------------------------------------- */
+/* --- UI HELPERS --- */
 function findPaywall() {
-  return (
-    document.querySelector("#paywall-screen") ||
-    document.querySelector("#auth-container") ||
-    document.querySelector("#signin-card") ||
-    document.querySelector(".auth-box") ||
-    document.querySelector("#paywall") ||
-    document.querySelector(".paywall")
-  );
+  return document.querySelector("#paywall-screen") || document.querySelector("#auth-container");
 }
 function findLoading() {
-  return (
-    document.querySelector("#auth-loading") ||
-    document.querySelector(".auth-loading")
-  );
+  return document.querySelector("#auth-loading") || document.querySelector(".auth-loading");
 }
 function hidePaywall() { const pw = findPaywall(); if (pw) pw.style.display = "none"; }
 function showPaywall() { const pw = findPaywall(); if (pw) pw.style.display = "block"; }
@@ -64,95 +50,53 @@ function hideAuthLoading() {
   if (el) el.style.display = "none";
 }
 
-/* -------------------------------------------------------
-   SAFE: Ensure Firestore user doc exists
-------------------------------------------------------- */
+/**
+ * Ensures user record exists in Firestore without blocking the UI flow.
+ * Data structure is perfectly aligned with Admin Portal and firebase-expiry.js.
+ */
 export async function ensureUserInFirestore(user) {
   if (!user || !user.uid) return null;
 
   try {
     const db = getFirestore();
     const ref = doc(db, `users/${user.uid}`);
+    const snap = await getDoc(ref);
 
-    const result = await runTransaction(db, async tx => {
-      const snap = await tx.get(ref);
+    const emailLower = (user.email || "").toLowerCase();
+    const isAdmin = ADMIN_EMAILS.includes(emailLower);
 
-      const emailLower = (user.email || "").toLowerCase();
-      const isAdmin = ADMIN_EMAILS.includes(emailLower);
+    // If user is new, create the document with the specific structure required by the Admin Dashboard
+    if (!snap.exists()) {
+      const newDoc = {
+        uid: user.uid,
+        email: user.email || null,
+        displayName: user.displayName || null,
+        // Initialized as Object to match Admin Portal toggles
+        paidClasses: { "6": false, "7": false, "8": false, "9": false, "10": false, "11": false, "12": false },
+        streams: "", // Initialized as String to match firebase-expiry.js
+        role: isAdmin ? "admin" : "student",
+        signupDate: serverTimestamp()
+      };
+      await setDoc(ref, newDoc);
+      return newDoc;
+    }
 
-      if (!snap.exists()) {
-        const newDoc = {
-          uid: user.uid,
-          email: user.email || null,
-          displayName: user.displayName || null,
-          paidClasses: [],
-          streams: [],
-          role: isAdmin ? "admin" : "student",
-          signupDate: serverTimestamp()
-        };
-        tx.set(ref, newDoc, { merge: true });
-        return newDoc;
-      }
-
-      const data = snap.data();
-      const updates = {};
-      let changed = false;
-
-      if (!Array.isArray(data.paidClasses)) {
-        updates.paidClasses = [];
-        changed = true;
-      }
-      if (!Array.isArray(data.streams)) {
-        updates.streams = [];
-        changed = true;
-      }
-
-      if (!data.role) {
-        updates.role = isAdmin ? "admin" : "student";
-        changed = true;
-      } else if (isAdmin && data.role !== "admin") {
-        updates.role = "admin";
-        changed = true;
-      }
-
-      if (user.email && data.email !== user.email) {
-        updates.email = user.email;
-        changed = true;
-      }
-
-      if (user.displayName && data.displayName !== user.displayName) {
-        updates.displayName = user.displayName;
-        changed = true;
-      }
-
-      if (changed) tx.set(ref, updates, { merge: true });
-
-      return { ...data, ...updates };
-    });
-
-    window.authPaywall = window.authPaywall || {};
-    window.authPaywall.userDoc = result;
-
-    return result;
-
+    // If user exists, return data (Silent Trial logic will handle the rest in firebase-expiry.js)
+    return snap.data();
   } catch (e) {
-    console.warn(LOG, "ensureUserInFirestore failed", e);
-    return null; // Never break login flow
+    console.warn(LOG, "Firestore sync delayed or failed. Access remains open.", e);
+    return null; 
   }
 }
 
-// expose globally
-window.authPaywall = window.authPaywall || {};
-window.authPaywall.ensureUserInFirestore = ensureUserInFirestore;
-
-/* -------------------------------------------------------
-   AUTH LISTENER
-------------------------------------------------------- */
+/**
+ * AUTH LISTENER: The primary gatekeeper.
+ * Immediately hides paywall upon authentication to provide instant access.
+ */
 export async function initializeAuthListener(callback = null) {
   await initializeServices();
   const { auth } = getInitializedClients();
 
-  window.auth = auth;
   if (callback) externalCallback = callback;
 
   try { await setPersistence(auth, browserLocalPersistence); }
@@ -162,10 +106,12 @@ export async function initializeAuthListener(callback = null) {
     console.log(LOG, "State →", user?.email || "Signed OUT");
 
     if (user) {
-      try { await ensureUserInFirestore(user); } catch {}
-
+      // 1. Instantly allow access
       hidePaywall();
       hideAuthLoading();
+
+      // 2. Sync user data in the background (Non-blocking)
+      ensureUserInFirestore(user);
 
       if (externalCallback) {
         try { externalCallback(user); } catch {}
@@ -173,6 +119,7 @@ export async function initializeAuthListener(callback = null) {
       return;
     }
 
+    // If not logged in, show login screen
     showPaywall();
     showAuthLoading("Please sign in to continue");
 
@@ -180,13 +127,11 @@ export async function initializeAuthListener(callback = null) {
       try { externalCallback(null); } catch {}
     }
   });
-
-  console.log(LOG, "Auth listener ready.");
 }
 
-/* -------------------------------------------------------
-   SIGN-IN
-------------------------------------------------------- */
+/**
+ * GOOGLE SIGN-IN: Triggers the popup and handles initial record creation.
+ */
 export async function signInWithGoogle() {
   await initializeServices();
   const { auth } = getInitializedClients();
@@ -195,33 +140,27 @@ export async function signInWithGoogle() {
 
   try {
     const result = await signInWithPopup(auth, provider);
-    try { await ensureUserInFirestore(result.user); } catch {}
+    // Create record immediately after login
+    ensureUserInFirestore(result.user);
     hideAuthLoading();
     hidePaywall();
     return result.user;
   } catch (e) {
-    console.error(LOG, "Popup error:", e);
+    console.error(LOG, "Login Error:", e.message);
     hideAuthLoading();
+    alert("Login failed. Please ensure pop-ups are allowed for this site.");
     return null;
   }
 }
 
-/* -------------------------------------------------------
-   SIGN OUT
-------------------------------------------------------- */
 export async function signOut() {
   await initializeServices();
   const { auth } = getInitializedClients();
-
   showPaywall();
   showAuthLoading("Signing out…");
-
   return firebaseSignOut(auth);
 }
 
-/* -------------------------------------------------------
-   checkAccess (unchanged)
-------------------------------------------------------- */
 export function checkAccess() {
   try {
     const { auth } = getInitializedClients();
