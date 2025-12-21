@@ -2,7 +2,7 @@
 import { initializeServices, getAuthUser } from "./config.js"; 
 import { fetchQuestions, saveResult } from "./api.js";
 import * as UI from "./ui-renderer.js";
-import { checkAccess, initializeAuthListener } from "./auth-paywall.js";
+import { checkAccess, initializeAuthListener, requireAuth } from "./auth-paywall.js";
 // NEW: Import access check logic
 import { checkClassAccess } from "./firebase-expiry.js";
 
@@ -121,7 +121,6 @@ async function handleSubmit() {
     });
 
     UI.renderResults(stats, quizState.difficulty);
-    // Save results to Firestore
     saveResult({ ...quizState, score: stats.correct, total: stats.total });
 }
 
@@ -142,34 +141,46 @@ function attachDomEvents() {
     });
 }
 
+/* ============================================================
+   🔒 REQUIRED ADDITION — DO NOT REMOVE
+   Wires Google Sign-in button to Firebase popup
+   ============================================================ */
+function wireGoogleLogin() {
+    const btn = document.getElementById("google-signin-btn");
+    if (!btn) return;
+
+    btn.onclick = async () => {
+        await requireAuth();
+        location.reload();
+    };
+}
+
 /**
  * App Lifecycle Initialization: Gates access based on Auth and Trial Status.
  */
 async function init() {
-  UI.initializeElements();
-  parseUrlParameters();
-  attachDomEvents();
-  UI.attachAnswerListeners(handleAnswerSelection);
-  
-  await initializeServices(); 
-  
-  // Final Auth Gate
-  await initializeAuthListener(async (user) => {
-      if (user) {
-          // Verify trial/expiry status before loading quiz
-          const access = await checkClassAccess(quizState.classId, quizState.subject);
-          if (access.allowed) {
-              loadQuiz();
-          } else {
-              // Redirect to index if trial ended or manually blocked
-              alert(access.reason || "Access Restricted.");
-              location.href = "index.html";
-          }
-      } else {
-          // Force sign-in screen if not logged in
-          UI.showView("paywall-screen");
-      }
-  });
+    UI.initializeElements();
+    parseUrlParameters();
+    attachDomEvents();
+    UI.attachAnswerListeners(handleAnswerSelection);
+
+    await initializeServices();
+
+    wireGoogleLogin(); // 🔥 critical fix
+
+    await initializeAuthListener(async (user) => {
+        if (user) {
+            const access = await checkClassAccess(quizState.classId, quizState.subject);
+            if (access.allowed) {
+                loadQuiz();
+            } else {
+                alert(access.reason || "Access Restricted.");
+                location.href = "index.html";
+            }
+        } else {
+            UI.showView("paywall-screen");
+        }
+    });
 }
 
 document.addEventListener("DOMContentLoaded", init);
