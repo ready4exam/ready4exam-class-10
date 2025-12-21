@@ -3,7 +3,6 @@ import { initializeServices, getAuthUser } from "./config.js";
 import { fetchQuestions, saveResult } from "./api.js";
 import * as UI from "./ui-renderer.js";
 import { checkAccess, initializeAuthListener, requireAuth } from "./auth-paywall.js";
-// NEW: Import access check logic
 import { checkClassAccess } from "./firebase-expiry.js";
 
 let quizState = {
@@ -80,10 +79,41 @@ async function loadQuiz() {
             UI.hideStatus();
             renderQuestion();
             UI.showView("quiz-content");
+        } else {
+            UI.showStatus("No questions found for this level. Try another difficulty!", "text-amber-600");
         }
     } catch (e) {
         UI.showStatus(`Error: ${e.message}`, "text-red-600");
     }
+}
+
+/**
+ * NEW: Difficulty Toggle Logic
+ * Resets state and re-fetches questions for the selected difficulty level.
+ */
+async function changeDifficulty(newDiff) {
+    // 1. Reset State
+    quizState.difficulty = newDiff;
+    quizState.currentQuestionIndex = 0;
+    quizState.userAnswers = {};
+    quizState.isSubmitted = false;
+    quizState.questions = [];
+
+    // 2. Clear Results UI
+    const resultsView = document.getElementById("results-screen");
+    if (resultsView) resultsView.classList.add("hidden");
+    
+    const revContainer = document.getElementById("review-container");
+    if (revContainer) {
+        revContainer.classList.add("hidden");
+        revContainer.innerHTML = "";
+    }
+
+    // 3. Update Header & Reload
+    const currentTitle = document.getElementById("chapter-name-display")?.textContent || "Worksheet";
+    UI.updateHeader(currentTitle, newDiff);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    await loadQuiz();
 }
 
 function renderQuestion() {
@@ -129,11 +159,20 @@ function attachDomEvents() {
         const btn = e.target.closest("button, a");
         if (!btn) return;
 
+        // Navigation
         if (btn.id === "prev-btn") handleNavigation(-1);
         if (btn.id === "next-btn") handleNavigation(1);
         if (btn.id === "submit-btn") handleSubmit();
+        
+        // Review & Analysis
         if (btn.id === "btn-review-errors") UI.renderAllQuestionsForReview(quizState.questions, quizState.userAnswers);
         
+        // Difficulty Selection
+        if (btn.id === "btn-simple") changeDifficulty("Simple");
+        if (btn.id === "btn-medium") changeDifficulty("Medium");
+        if (btn.id === "btn-advance") changeDifficulty("Advance");
+        
+        // Navigation Back
         if (btn.id === "back-to-chapters-btn") {
             const subject = quizState.subject || "Physics";
             window.location.href = `chapter-selection.html?subject=${encodeURIComponent(subject)}`;
@@ -141,10 +180,6 @@ function attachDomEvents() {
     });
 }
 
-/* ============================================================
-   🔒 REQUIRED ADDITION — DO NOT REMOVE
-   Wires Google Sign-in button to Firebase popup
-   ============================================================ */
 function wireGoogleLogin() {
     const btn = document.getElementById("google-signin-btn");
     if (!btn) return;
@@ -156,7 +191,7 @@ function wireGoogleLogin() {
 }
 
 /**
- * App Lifecycle Initialization: Gates access based on Auth and Trial Status.
+ * App Lifecycle Initialization
  */
 async function init() {
     UI.initializeElements();
@@ -165,8 +200,7 @@ async function init() {
     UI.attachAnswerListeners(handleAnswerSelection);
 
     await initializeServices();
-
-    wireGoogleLogin(); // 🔥 critical fix
+    wireGoogleLogin();
 
     await initializeAuthListener(async (user) => {
         if (user) {
