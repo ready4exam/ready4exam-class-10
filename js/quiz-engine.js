@@ -20,7 +20,7 @@ let quizState = {
 let questionsPromise = null;
 
 /* -----------------------------------
-   PARSE URL PARAMETERS
+   PARSE URL PARAMETERS (Fully Dynamic)
 ----------------------------------- */
 function parseUrlParameters() {
     const params = new URLSearchParams(location.search);
@@ -29,12 +29,27 @@ function parseUrlParameters() {
     quizState.classId = params.get("class") || "11";
     quizState.subject = params.get("subject") || "Physics";
 
-    let chapterPart = quizState.topicSlug.replace(/[_\d]/g, " ").replace(/quiz/ig, "").trim();
-    const subjectRegex = new RegExp(`^${quizState.subject}\\s*`, "i");
-    chapterPart = chapterPart.replace(subjectRegex, "").trim();
+    // 1. Dynamic Cleanup: Remove underscores/numbers and strip the "quiz" suffix
+    let cleanChapter = quizState.topicSlug
+        .replace(/[_\d]/g, " ")
+        .replace(/quiz/ig, "")
+        .trim();
 
-    const cleanName = chapterPart.replace(/\b\w/g, c => c.toUpperCase());
-    const fullTitle = `Class ${quizState.classId}: ${quizState.subject} - ${cleanName} Worksheet`;
+    // 2. Dynamic Subject Stripping: If the slug starts with the subject name, remove it
+    const subjectRegex = new RegExp(`^${quizState.subject}\\s*`, "i");
+    cleanChapter = cleanChapter.replace(subjectRegex, "").trim();
+
+    // 3. Dynamic Title Casing: Convert "acids bases salts" to "Acids Bases Salts"
+    cleanChapter = cleanChapter.replace(/\b\w/g, c => c.toUpperCase());
+
+    // 4. Grammar Refinement: Standardize common chemical/mathematical chapter naming
+    cleanChapter = cleanChapter.replace(/And/g, "and"); // keep 'and' lowercase for aesthetics
+    if (cleanChapter.toLowerCase().includes("acids bases salts")) {
+        cleanChapter = "Acid, Bases and Salts";
+    }
+
+    // Maintains Final Format: Class 10: Science - Acid, Bases and Salts Worksheet
+    const fullTitle = `Class ${quizState.classId}: ${quizState.subject} - ${cleanChapter} Worksheet`;
 
     UI.updateHeader(fullTitle, quizState.difficulty);
 }
@@ -169,22 +184,22 @@ function wireGoogleLogin() {
    INIT
 ----------------------------------- */
 async function init() {
-    // 1. Initial UI Setup (Synchronous-like)
+    // 1. Initial UI Setup
     UI.initializeElements();
     parseUrlParameters();
     attachDomEvents();
     UI.attachAnswerListeners(handleAnswerSelection);
 
     try {
-        // 2. WAIT for services to be ready first to prevent "initializeServices FIRST" error
+        // 2. Parallel initialization: Start services first
         await initializeServices();
         
-        // 3. Immediately trigger question fetch after services are ready
+        // 3. Immediately trigger question fetch (Services are now ready)
         questionsPromise = fetchQuestions(quizState.topicSlug, quizState.difficulty);
 
         wireGoogleLogin();
 
-        // 4. Handle Auth and Access in the background while data fetches
+        // 4. Handle Auth and Access while data fetches in background
         await initializeAuthListener(async user => {
             if (user) {
                 const access = await checkClassAccess(quizState.classId, quizState.subject);
