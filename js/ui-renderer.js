@@ -44,36 +44,61 @@ export function initializeElements() {
 }
 
 /* -----------------------------------
-   PERFORMANCE HELPER: Pre-clean data
+   BULLETPROOF AR NORMALIZER
 ----------------------------------- */
-function getCleanedText(q, key, fallback = "") {
-    const cacheKey = `_clean_${key}`;
-    if (!q[cacheKey]) {
-        q[cacheKey] = cleanKatexMarkers(q[key] || fallback);
+function normalizeAssertionReason(q) {
+    const combined = `
+        ${q.question_text || q.text || ""}
+        ${q.scenario_reason_text || q.scenario_reason || ""}
+    `.replace(/\s+/g, " ").trim();
+
+    let assertion = "";
+    let reason = "";
+
+    const split = combined.split(/Reason\s*\(R\)\s*:/i);
+
+    if (split.length > 1) {
+        assertion = split[0];
+        reason = split.slice(1).join(" ");
+    } else {
+        assertion = combined;
+        reason = "";
     }
-    return q[cacheKey];
+
+    assertion = assertion.replace(/Assertion\s*\(A\)\s*:/i, "").trim();
+
+    if (!reason && assertion.match(/Reason\s*\(R\)/i)) {
+        const p = assertion.split(/Reason\s*\(R\)\s*:/i);
+        assertion = p[0].replace(/Assertion\s*\(A\)\s*:/i, "").trim();
+        reason = (p[1] || "").trim();
+    }
+
+    return {
+        assertion: cleanKatexMarkers(assertion),
+        reason: cleanKatexMarkers(reason)
+    };
 }
 
 /* -----------------------------------
    OPTION HTML
 ----------------------------------- */
 function generateOptionHtml(q, opt, selected, submitted, labelText) {
-    // Map database columns to UI labels
     const rawText = labelText || q.options?.[opt] || q[`option_${opt.toLowerCase()}`] || "";
     const isSel = selected === opt;
     const isCorrect = submitted && (q.correct_answer === opt || q.correct_answer_key === opt);
     const isWrong = submitted && isSel && !isCorrect;
 
-    const cls = isCorrect ? "border-green-600 bg-green-50" :
-                isWrong ? "border-red-600 bg-red-50" :
-                isSel ? "border-blue-500 bg-blue-50" :
-                "border-gray-100 bg-white hover:border-blue-300";
+    const cls =
+        isCorrect ? "border-green-600 bg-green-50" :
+        isWrong ? "border-red-600 bg-red-50" :
+        isSel ? "border-blue-500 bg-blue-50" :
+        "border-gray-100 bg-white hover:border-blue-300";
 
     return `
         <label class="block cursor-pointer">
             <input type="radio" name="q-${q.id}" value="${opt}" class="hidden"
                 ${isSel ? "checked" : ""} ${submitted ? "disabled" : ""}>
-            <div class="flex items-start p-4 border-2 rounded-xl transition-all duration-200 ${cls}">
+            <div class="flex items-start p-4 border-2 rounded-xl transition-all ${cls}">
                 <span class="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-100 font-bold mr-4">${opt}</span>
                 <span class="font-medium">${cleanKatexMarkers(rawText)}</span>
             </div>
@@ -81,130 +106,84 @@ function generateOptionHtml(q, opt, selected, submitted, labelText) {
 }
 
 /* -----------------------------------
-   QUESTION RENDERER (Optimized for Mobile)
+   QUESTION RENDERER
 ----------------------------------- */
 export function renderQuestion(q, idx, selected, submitted) {
     initializeElements();
-    
-    // Defer rendering to the next frame to prevent UI freezing on mobile
-    requestAnimationFrame(() => {
-        const type = (q.question_type || "").toLowerCase();
-        const mainText = getCleanedText(q, 'question_text', q.text);
-        const scenario = getCleanedText(q, 'scenario_reason_text', q.scenario_reason);
+    if (!els.list) return;
 
-        /* ASSERTION–REASON */
-        if (type.includes("ar") || type.includes("assertion")) {
-            let A = mainText.replace(/Assertion\s*\(A\)\s*:/ig, "").trim();
-            let R = scenario.replace(/Reason\s*\(R\)\s*:/ig, "").trim();
+    const type = (q.question_type || "").toLowerCase();
 
-            els.list.innerHTML = `
-                <div class="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-                    <div class="text-xl font-extrabold">Q${idx}. Assertion (A): ${A}</div>
-                    <div class="bg-blue-50 p-6 rounded-2xl border-l-4 border-blue-600">
-                        <span class="text-xs font-black uppercase">Reason (R)</span>
-                        <div class="text-lg font-bold">${R}</div>
-                    </div>
-                    <div class="italic font-bold text-slate-500">Choose the correct option.</div>
-                    <div class="grid gap-3">
-                        ${['A','B','C','D'].map(o => generateOptionHtml(q, o, selected, submitted, AR_LABELS[o])).join("")}
-                    </div>
-                </div>`;
-            return;
-        }
+    /* ===== ASSERTION–REASON ===== */
+    if (type.includes("ar") || type.includes("assertion")) {
+        const { assertion, reason } = normalizeAssertionReason(q);
 
-        /* CASE STUDY */
-        if (type.includes("case")) {
-            els.list.innerHTML = `
-                <div class="animate-in fade-in duration-300 grid md:grid-cols-2 gap-8">
-                    <div>
-                        <div class="text-xl font-extrabold">Q${idx}: ${mainText}</div>
-                        <div class="grid gap-3 mt-4">
-                            ${['A','B','C','D'].map(o => generateOptionHtml(q, o, selected, submitted)).join("")}
-                        </div>
-                    </div>
-                    <div class="bg-yellow-50 p-6 rounded-2xl border-2 border-dashed border-yellow-200 italic">${scenario}</div>
-                </div>`;
-            return;
-        }
-
-        /* MCQ */
         els.list.innerHTML = `
-            <div class="animate-in fade-in slide-in-from-bottom-2 duration-300 space-y-6">
-                <div class="text-xl font-extrabold">Q${idx}: ${mainText}</div>
+            <div class="space-y-6">
+                <div class="text-xl font-extrabold">
+                    Q${idx}. Assertion (A): ${assertion}
+                </div>
+
+                <div class="bg-blue-50 p-6 rounded-2xl border-l-4 border-blue-600">
+                    <span class="text-xs font-black uppercase tracking-widest">Reason (R)</span>
+                    <div class="text-lg font-bold">${reason}</div>
+                </div>
+
+                <div class="italic font-bold text-slate-500">
+                    Choose the correct option.
+                </div>
+
                 <div class="grid gap-3">
-                    ${['A','B','C','D'].map(o => generateOptionHtml(q, o, selected, submitted)).join("")}
+                    ${['A','B','C','D'].map(o =>
+                        generateOptionHtml(q, o, selected, submitted, AR_LABELS[o])
+                    ).join("")}
                 </div>
             </div>`;
-    });
+        return;
+    }
+
+    /* ===== CASE STUDY (MOBILE-FIRST ORDER FIX) ===== */
+    if (type.includes("case")) {
+        els.list.innerHTML = `
+            <div class="grid md:grid-cols-2 gap-8">
+                
+                <!-- QUESTION + OPTIONS -->
+                <div class="order-2 md:order-1">
+                    <div class="text-xl font-extrabold">
+                        Q${idx}: ${cleanKatexMarkers(q.text)}
+                    </div>
+
+                    <div class="grid gap-3 mt-4">
+                        ${['A','B','C','D'].map(o =>
+                            generateOptionHtml(q, o, selected, submitted)
+                        ).join("")}
+                    </div>
+                </div>
+
+                <!-- HINT -->
+                <div class="order-1 md:order-2 bg-yellow-50 p-6 rounded-2xl italic">
+                    ${cleanKatexMarkers(q.scenario_reason)}
+                </div>
+            </div>`;
+        return;
+    }
+
+    /* ===== MCQ ===== */
+    els.list.innerHTML = `
+        <div class="space-y-6">
+            <div class="text-xl font-extrabold">
+                Q${idx}: ${cleanKatexMarkers(q.text)}
+            </div>
+            <div class="grid gap-3">
+                ${['A','B','C','D'].map(o =>
+                    generateOptionHtml(q, o, selected, submitted)
+                ).join("")}
+            </div>
+        </div>`;
 }
 
 /* -----------------------------------
-   RESULTS + REVIEW MISTAKES
------------------------------------ */
-export function renderResults(stats) {
-    initializeElements();
-    showView("results-screen");
-    const motivation = (score, total) => {
-        const p = (score / total) * 100;
-        if (p === 100) return "Perfect Score! You are a subject expert.";
-        if (p >= 80) return "Excellent work! Almost mastered.";
-        return "Keep practicing, you're getting better!";
-    };
-
-    els.scoreBox.innerHTML = `
-        <div class="text-4xl font-black text-slate-900">${stats.correct} / ${stats.total}</div>
-        <div class="mt-3 px-4 py-3 bg-blue-50 rounded-2xl text-sm font-bold text-blue-800 text-center">
-            ${motivation(stats.correct, stats.total)}
-        </div>
-    `;
-}
-
-export function renderAllQuestionsForReview(qs, ua) {
-    initializeElements();
-    if (!els.reviewContainer) return;
-
-    els.reviewContainer.innerHTML = `<div class="py-10 text-center"><h3 class="text-2xl font-black">Reviewing Your Logic...</h3></div>`;
-    els.reviewContainer.classList.remove("hidden");
-
-    // Use a timeout to allow the "Reviewing..." message to show before heavy DOM injection
-    setTimeout(() => {
-        const html = qs.map((q, i) => {
-            const userAns = ua[q.id];
-            const correctAns = q.correct_answer || q.correct_answer_key;
-            const isCorrect = userAns === correctAns;
-            const isAR = q.question_type.toLowerCase().includes("ar");
-            
-            const getOptText = (k) => {
-                if (isAR) return AR_LABELS[k];
-                return q.options?.[k] || q[`option_${k.toLowerCase()}`] || "N/A";
-            };
-
-            return `
-            <div class="p-6 bg-white rounded-2xl border mb-6 relative shadow-sm">
-                <div class="absolute top-0 right-0 px-3 py-1 text-xs font-black text-white ${isCorrect ? "bg-green-500" : "bg-amber-400"}">
-                    ${isCorrect ? "Mastered" : "Learning"}
-                </div>
-                <p class="font-bold mb-4">Q${i + 1}. ${getCleanedText(q, 'question_text', q.text)}</p>
-                <div class="grid md:grid-cols-2 gap-4">
-                    <div class="p-3 bg-slate-50 rounded-xl border ${!isCorrect ? 'border-red-100' : ''}">
-                        <span class="text-xs font-black text-slate-400 uppercase">Your Choice</span>
-                        <p class="text-sm">${userAns ? getOptText(userAns) : "Skipped"}</p>
-                    </div>
-                    <div class="p-3 bg-green-50 rounded-xl border border-green-100">
-                        <span class="text-xs font-black text-green-600 uppercase">Correct Answer</span>
-                        <p class="text-sm">${getOptText(correctAns)}</p>
-                    </div>
-                </div>
-            </div>`;
-        }).join("");
-
-        els.reviewContainer.innerHTML = `<div class="mb-10 text-center"><h3 class="text-3xl font-black">The Learning Map</h3></div>` + html;
-        els.reviewContainer.scrollIntoView({ behavior: "smooth" });
-    }, 50);
-}
-
-/* -----------------------------------
-   UI HELPERS (Standard)
+   UI HELPERS (UNCHANGED)
 ----------------------------------- */
 export function hideStatus(){ els.status?.classList.add("hidden"); }
 export function updateHeader(t,d){ els.header.textContent=t; els.diff.textContent=`Difficulty: ${d}`; }
@@ -220,7 +199,9 @@ export function updateNavigation(i,t,s){
     els.counter.textContent=`${i+1}/${t}`;
 }
 export function attachAnswerListeners(fn){
-    els.list.onchange=e=>{ if(e.target.type==="radio") fn(e.target.name.slice(2),e.target.value); };
+    els.list.onchange=e=>{
+        if(e.target.type==="radio") fn(e.target.name.slice(2),e.target.value);
+    };
 }
 export function updateAuthUI(u){
     if(u && els.welcomeUser){
