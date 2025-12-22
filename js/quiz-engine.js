@@ -19,6 +19,9 @@ let quizState = {
 // Global promise to hold question data while Auth is processing
 let questionsPromise = null;
 
+/* -----------------------------------
+   PARSE URL PARAMETERS
+----------------------------------- */
 function parseUrlParameters() {
     const params = new URLSearchParams(location.search);
     quizState.topicSlug = params.get("table") || params.get("topic") || "";
@@ -36,13 +39,15 @@ function parseUrlParameters() {
     UI.updateHeader(fullTitle, quizState.difficulty);
 }
 
+/* -----------------------------------
+   LOAD QUIZ
+----------------------------------- */
 async function loadQuiz() {
     try {
         UI.showStatus("Preparing worksheet...", "text-blue-600 font-bold");
 
         // Wait for the promise that was started in init()
         const processedQuestions = await questionsPromise;
-
         quizState.questions = processedQuestions;
 
         if (quizState.questions.length > 0) {
@@ -55,6 +60,9 @@ async function loadQuiz() {
     }
 }
 
+/* -----------------------------------
+   RENDER QUESTION
+----------------------------------- */
 function renderQuestion() {
     const q = quizState.questions[quizState.currentQuestionIndex];
     UI.renderQuestion(
@@ -70,6 +78,9 @@ function renderQuestion() {
     );
 }
 
+/* -----------------------------------
+   ANSWER HANDLERS
+----------------------------------- */
 function handleAnswerSelection(id, opt) {
     if (!quizState.isSubmitted) {
         quizState.userAnswers[id] = opt;
@@ -82,6 +93,9 @@ function handleNavigation(delta) {
     renderQuestion();
 }
 
+/* -----------------------------------
+   SUBMIT QUIZ
+----------------------------------- */
 async function handleSubmit() {
     quizState.isSubmitted = true;
 
@@ -109,9 +123,17 @@ async function handleSubmit() {
     });
 
     UI.renderResults(stats, quizState.difficulty);
-    saveResult({ ...quizState, score: stats.correct, total: stats.total });
+    saveResult({ 
+        ...quizState, 
+        score: stats.correct, 
+        total: stats.total,
+        topic: quizState.topicSlug 
+    });
 }
 
+/* -----------------------------------
+   DOM EVENTS
+----------------------------------- */
 function attachDomEvents() {
     document.addEventListener("click", e => {
         const btn = e.target.closest("button, a");
@@ -130,6 +152,9 @@ function attachDomEvents() {
     });
 }
 
+/* -----------------------------------
+   GOOGLE LOGIN WIRE
+----------------------------------- */
 function wireGoogleLogin() {
     const btn = document.getElementById("google-signin-btn");
     if (btn) {
@@ -140,6 +165,9 @@ function wireGoogleLogin() {
     }
 }
 
+/* -----------------------------------
+   INIT
+----------------------------------- */
 async function init() {
     // 1. Initial UI Setup (Synchronous-like)
     UI.initializeElements();
@@ -147,28 +175,33 @@ async function init() {
     attachDomEvents();
     UI.attachAnswerListeners(handleAnswerSelection);
 
-    // 2. PARALLEL START: Launch Data Fetch and Service Init simultaneously
-    questionsPromise = fetchQuestions(quizState.topicSlug, quizState.difficulty);
-    const servicesPromise = initializeServices();
+    try {
+        // 2. WAIT for services to be ready first to prevent "initializeServices FIRST" error
+        await initializeServices();
+        
+        // 3. Immediately trigger question fetch after services are ready
+        questionsPromise = fetchQuestions(quizState.topicSlug, quizState.difficulty);
 
-    // 3. Wait for Firebase/Services to be ready
-    await servicesPromise;
-    wireGoogleLogin();
+        wireGoogleLogin();
 
-    // 4. Handle Auth and Access
-    await initializeAuthListener(async user => {
-        if (user) {
-            const access = await checkClassAccess(quizState.classId, quizState.subject);
-            if (access.allowed) {
-                loadQuiz(); // This will now resolve quickly as fetch is already in progress
+        // 4. Handle Auth and Access in the background while data fetches
+        await initializeAuthListener(async user => {
+            if (user) {
+                const access = await checkClassAccess(quizState.classId, quizState.subject);
+                if (access.allowed) {
+                    loadQuiz(); 
+                } else {
+                    alert(access.reason || "Access Restricted.");
+                    location.href = "index.html";
+                }
             } else {
-                alert(access.reason || "Access Restricted.");
-                location.href = "index.html";
+                UI.showView("paywall-screen");
             }
-        } else {
-            UI.showView("paywall-screen");
-        }
-    });
+        });
+    } catch (err) {
+        console.error("Initialization failed:", err);
+        UI.showStatus("System error during startup.", "text-red-600");
+    }
 }
 
 document.addEventListener("DOMContentLoaded", init);
